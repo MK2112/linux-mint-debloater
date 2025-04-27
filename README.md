@@ -1,27 +1,75 @@
 # Linux Mint Debloater
 
-Streamline and optimize your Linux Mint 22.1, 22 or 21.3
+Streamline and optimize your Linux Mint 22.1, 22 or 21.3.
 
 ```bash
 sudo apt install -y git
-git clone https://github.com/MK2112/Linux-Mint-Debloater
-cd Linux-Mint-Debloater
+# Clone the repository
+git clone https://github.com/MK2112/linux-mint-debloater.git
+cd linux-mint-debloater
+# Execute the script
 chmod +x debloat-mint.sh
 sudo ./debloat-mint.sh
 ```
-This project is a hard fork of [aaron-dev-git/Linux-Mint-Debloater](https://github.com/aaron-dev-git/Linux-Mint-Debloater).
 
-## Features
+> **Supported:** Linux Mint 21.3, 22, 22.1 (tested)
 
-- **Backup:** Create a system snapshot before making changes
-- **Debloat:** Remove pre-installed, unnecessary programs
-- **Optimize:** Enhance system performance, configure specifically for portable use, decrease boot time, turn off Flatpak
-- **Secure:** Install security updates, reduce telemetry
-- **Harden:** Setup and configure UFW firewall, SSH Hardening
-- **Customize:** Install a list of programs
-- **Automate:** Set the value of `auto` in `config.txt` to `true` to skip all user interactions and instead execute on `config.txt` settings.
+## Functionality
+
+All of these are optional, you can pick what you want to do:
+
+- **Backs up** your system (Timeshift snapshot)
+- **Debloats**: Removes unwanted pre-installed software (fully customizable)
+- **Optimizes**: Improves performance, boot time, and configures for portable use
+- **Secures**: Updates, disables telemetry, and configures firewall
+- **Hardens**: SSH and firewall hardening (with double confirmation for SSH)
+- **Installs**: Lets you define a custom list of programs to install
+- **Automates**: Set `auto=true` in `config.txt` for unattended, fully automatic runs
+
+## Safety & UX
+
+- **Dependency Checks**: The script halts if `zenity`, `timeshift`, or `ufw` are missing, so you never run into missing tool errors. These are installed by default on Mint, but just to make sure.
+- **Root Required**: Will only run as root for your safety.
+- **Double Confirmation**: SSH hardening prompts for a second "Are you sure?" confirmation to prevent accidental lockouts.
+- **No Surprises**: Every major action is confirmed with you, unless you enable full auto-mode.
+
+## Configuration: `config.txt`
+
+Options for automated runs are controlled by a simple `config.txt` file.<br>
+The lists for programs to be removed or installed are editable in the `debloat-mint.sh` script itself.
+
+Example:
+```ini
+auto=false
+options/create_snapshot=true
+options/debloat=true
+options/portable_use=false
+options/disable_flatpak=false
+options/optimize_boot=true
+options/disable_telemetry=true
+options/configure_firewall=true
+options/harden_ssh=false
+options/update_system=true
+options/install_programs=true
+options/reboot_system=false
+```
+**`auto`**: Set to `true` for automated runs (no prompts)
+
+## How to Use
+
+1. **Edit `config.txt`** to select which actions to perform. All options are explained in comments above.
+2. **Run the script as root**: `sudo ./debloat-mint.sh`
+3. **Follow the prompts** (unless in auto mode). Confirm or skip each action.
+
+## Tips
+- **First time?** Run with defaults and review each prompt.
+- **Automate everything:** Set `auto=true` for hands-off setup (great for VM or repeatable builds).
+- **SSH Hardening:** Double-confirmation prevents accidental lockout. Read the prompts carefully!
 
 ## Requirements
-
-- Linux Mint (tested on 21.3, 22, 22.1)
+- Linux Mint (21.3, 22, 22.1)
 - Root privileges
+- `zenity`, `timeshift`, `ufw` (script will check and warn if missing)
+
+## Credits
+Based on a hard fork of [aaron-dev-git/Linux-Mint-Debloater](https://github.com/aaron-dev-git/Linux-Mint-Debloater). Enhanced for configurability, safety, and user experience.
