@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Check for required dependencies
+for dep in zenity timeshift ufw; do
+    if ! command -v "$dep" >/dev/null 2>&1; then
+        echo -e "\033[1;31m[ERROR]\033[0m Required dependency '$dep' not installed. Please install, then re-run this script."
+        exit 1
+    fi
+done
+
 # Color codes
 RED="\033[1;31m"
 GREEN="\033[1;32m"
