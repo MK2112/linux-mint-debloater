@@ -1,8 +1,22 @@
 #!/bin/bash
 
+# Color codes
+RED="\033[1;31m"
+GREEN="\033[1;32m"
+YELLOW="\033[1;33m"
+BLUE="\033[1;34m"
+CYAN="\033[1;36m"
+RESET="\033[0m"
+
+# Color functions
+info()    { echo -e "${CYAN}[i] $1${RESET}"; }
+success() { echo -e "${GREEN}[+] $1${RESET}"; }
+warn()    { echo -e "${YELLOW}[~] $1${RESET}"; }
+error()   { echo -e "${RED}[-] $1${RESET}"; }
+
 # Checking privileges
 if [ "$EUID" -ne 0 ]; then
-	echo "Please Run As Root."
+	error "Please Run As Root."
   	return 1 2>/dev/null
 	exit 1
 fi
@@ -15,7 +29,8 @@ read_config() {
 auto_mode=$(read_config "auto")
 
 if [ "$auto_mode" = "true" ]; then
-	echo "[+] Running In Auto Mode."
+	success "Running In Auto Mode."
+	info "Using config.txt settings."
 	echo
 	create_snapshot=$(read_config "options/create_snapshot")
 	debloat=$(read_config "options/debloat")
@@ -29,8 +44,8 @@ if [ "$auto_mode" = "true" ]; then
 	install_programs=$(read_config "options/install_programs")
 	reboot_system=$(read_config "options/reboot_system")
 else
-	echo "[+] Running In Manual Mode."
-	echo "[~] Change value of 'auto' to 'true' in config.txt to enable auto mode."
+	success "Running In Manual Mode."
+	warn "Change value of 'auto' to 'true' in config.txt to enable auto mode."
 	echo
 fi
 
@@ -50,14 +65,14 @@ if [ "$create_snapshot" = "true" ]; then
 	timeshift --create --comments "LM Primer ::System Snapshot:: $timestamp" --tags D
 
 	if [ $? -eq 0 ]; then
-	  	echo "Timeshift Snapshot Created Successfully."
+	  	success "Timeshift Snapshot Created Successfully."
 	else
-	  	echo "Failed To Create Timeshift Snapshot."
+	  	error "Failed To Create Timeshift Snapshot."
 	  	return 1 2>/dev/null
 		exit 1
 	fi
 else
-	echo "[~] Skipped Snapshot Creation."
+	warn "Skipped Snapshot Creation."
 fi
 
 # Debloat
@@ -102,9 +117,9 @@ if [ "$debloat" = "true" ]; then
 	done
 
 	sudo apt autoremove -y && sudo apt clean
- 	echo "[+] System Debloated."
+ 	success "System Debloated."
 else
-	echo "[~] Skipped System Debloat."
+	warn "Skipped System Debloat."
 fi
 
 # Portable Optimization
@@ -163,7 +178,7 @@ if [ "$portable_use" = "true" ]; then
 	# Disable Bluetooth on startup
 	BT_CONF_FILE="/etc/bluetooth/main.conf"
 	if [ ! -f "$BT_CONF_FILE" ]; then
-		echo "[!] Bluetooth Config Error: $BT_CONF_FILE Does Not Exist."
+		error "Bluetooth Config Error: $BT_CONF_FILE Does Not Exist."
 		return 1 2>/dev/null
 		exit 1
 	else
@@ -171,19 +186,18 @@ if [ "$portable_use" = "true" ]; then
 	fi
 
 	if grep -q "^AutoEnable=false" "$BT_CONF_FILE"; then
-    	echo "[+] Successfully Updated $BT_CONF_FILE. AutoEnable Is Now Set To <False>."
+    	success "Successfully Updated $BT_CONF_FILE. AutoEnable Is Now Set To <False>."
 	else
-    	echo "[!] Updating $BT_CONF_FILE Failed. Check Manually."
+    	error "Updating $BT_CONF_FILE Failed. Check Manually."
 	fi
 
 	# Install and configure preload for faster application launch
 	sudo apt install -y preload
 	sudo systemctl enable preload && sudo systemctl start preload
 	sudo apt autoremove -y && sudo apt clean
- 
-	echo "[+] Successfully Optimized For Portability."
+	success "Successfully Optimized For Portability."
 else
-	echo "[~] Skipped Optimization For Portability."
+	warn "Skipped Optimization For Portability."
 fi
 
 # Disable Flatpak
@@ -199,9 +213,9 @@ fi
 if [ "$disable_flatpak" = "true" ]; then
 	sudo apt purge flatpak
 	sudo apt-mark hold flatpak
- 	echo "[+] Disabled Flatpak."
+ 	success "Disabled Flatpak."
 else
-	echo "[~] Skipped Disabling Flatpak."
+	warn "Skipped Disabling Flatpak."
 fi
 
 # Boot Optimization
@@ -231,9 +245,9 @@ if [ "$optimize_boot" = "true" ]; then
 	# Systemd daemon-reload
 	sudo systemctl daemon-reload
 	
- 	echo "[+] Boot Optimization Successful."
+ 	success "Boot Optimization Successful."
 else
-	echo "[~] Skipped Boot Optimization."
+	warn "Skipped Boot Optimization."
 fi
 
 # Disable Reporting and Telemetry
@@ -260,7 +274,7 @@ if [ "$disable_telemetry" = "true" ]; then
 			echo 'user_pref("browser.newtabpage.activity-stream.feeds.telemetry", false);' >> "$firefox_config"
         	echo 'user_pref("extensions.htmlaboutaddons.recommendations.enabled", false);' >> "$firefox_config"
     	else
-        	echo "Firefox: Configuration file not found. Not installed or not used."
+        	warn "Firefox: Configuration file not found. Not installed or not used."
     	fi
 
     	thunderbird_config=$(find "/home/${SUDO_USER:-$USER}/.thunderbird/" -name "*.default-esr" -exec echo {}/prefs.js \;)
@@ -270,7 +284,7 @@ if [ "$disable_telemetry" = "true" ]; then
         	echo 'user_pref("mail.shell.checkDefaultClient", false);' >> "$thunderbird_config"
         	echo 'user_pref("mailnews.start_page.enabled", false);' >> "$thunderbird_config"
     	else
-        	echo "Thunderbird: Configuration file not found. Not installed or not used."
+        	warn "Thunderbird: Configuration file not found. Not installed or not used."
     	fi
 
 	chromium_config=$(find "/home/${SUDO_USER:-$USER}/.config/chromium/" -name "Default/Preferences")
@@ -278,14 +292,14 @@ if [ "$disable_telemetry" = "true" ]; then
 		sed -i 's/"metrics": {/"metrics": {"enabled": false,/' "$chromium_config"
 		sed -i 's/"reporting": {/"reporting": {"enabled": false,/' "$chromium_config"
 	else
-		echo "Chromium: Configuration file not found. Not installed or not used."
+		warn "Chromium: Configuration file not found. Not installed or not used."
 	fi	
 
 	# False by default, just making sure
 	gsettings set org.gnome.desktop.privacy send-software-usage-stats false
 	gsettings set org.gnome.desktop.privacy report-technical-problems false
 else
-	echo "[~] Skipped Reporting and Telemetry."
+	warn "Skipped Reporting and Telemetry."
 fi
 
 # Configure Firewall
@@ -327,9 +341,9 @@ if [ "$configure_firewall" = "true" ]; then
 	done
 
     sudo ufw --force enable
-    echo "[+] Firewall configured and enabled successfully."
+    success "Firewall configured and enabled successfully."
 else
-    echo "[~] Skipped Firewall configuration."
+    warn "Skipped Firewall configuration."
 fi
 
 # Harden SSH
@@ -376,9 +390,9 @@ if [ "$harden_ssh" = "true" ]; then
     # Refresh SSH service
     sudo systemctl restart sshd
 
-    echo "[+] SSH configuration hardened. SSH Port Changed To 2222. Requests To Port 22 Will Be Denied."
+    success "SSH configuration hardened. SSH Port Changed To 2222. Requests To Port 22 Will Be Denied."
 else
-    echo "[~] Skipped SSH hardening."
+    warn "Skipped SSH hardening."
 fi
 
 # Update System
@@ -394,7 +408,7 @@ fi
 if [ "$update_system" = "true" ]; then
 	sudo apt update && sudo apt upgrade -y
 else
-	echo "[~] Skipped Update."
+	warn "Skipped Update."
 fi
 
 # Install Programs
@@ -433,15 +447,15 @@ if [ "$install_programs" = "true" ]; then
 	for tool in "${!tools[@]}"; do
 		echo "Installing $tool..."
 		if eval ${tools[$tool]}; then
-			echo "[+] Installed $tool."
+			success "Installed $tool."
 			echo
 		else
-			echo "[-] Failed Installing $tool."
+			error "Failed Installing $tool."
 			echo
 		fi
 	done
 else
-	echo "[~] Skipped Program Installations."
+	warn "Skipped Program Installations."
 fi
 
 # Reboot System
