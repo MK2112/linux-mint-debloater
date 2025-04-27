@@ -365,6 +365,14 @@ if ! [ "$auto_mode" = "true" ]; then
 fi
 
 if [ "$harden_ssh" = "true" ]; then
+    zenity --question --text="Are you sure? This will change your SSH configuration and port." --no-wrap
+    if [ $? != 0 ]; then
+        warn "SSH hardening cancelled by user."
+        harden_ssh="false"
+    fi
+fi
+
+if [ "$harden_ssh" = "true" ]; then
     # Backup SSH config
     sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
 	# Move SSH to port 2222
