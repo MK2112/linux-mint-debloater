@@ -1,6 +1,6 @@
 # Linux Mint Debloater
 
-Streamline and optimize your Linux Mint 22 or 21.3
+Streamline and optimize your Linux Mint 22.1, 22 or 21.3
 
 ```bash
 sudo apt install -y git
@@ -23,5 +23,5 @@ This project is a hard fork of [aaron-dev-git/Linux-Mint-Debloater](https://gith
 
 ## Requirements
 
-- Linux Mint (tested on 21.3, 22 Stable)
+- Linux Mint (tested on 21.3, 22, 22.1)
 - Root privileges
