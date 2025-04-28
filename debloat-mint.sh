@@ -35,6 +35,7 @@ read_config() {
 }
 
 auto_mode=$(read_config "auto")
+disable_online_accounts=$(read_config "options/disable_online_accounts")
 
 if [ "$auto_mode" = "true" ]; then
 	success "Running In Auto Mode."
@@ -258,6 +259,32 @@ else
 	warn "Skipped Boot Optimization."
 fi
 
+# Disable Online Accounts Integration
+if ! [ "$auto_mode" = "true" ]; then
+    zenity --question --text="Disable Online Accounts Integration?" --no-wrap
+    if [ $? = 0 ]; then
+        disable_online_accounts="true"
+    else
+        disable_online_accounts="false"
+    fi
+fi
+
+if [ "$disable_online_accounts" = "true" ]; then
+    info "Disabling GNOME Online Accounts and related integration..."
+    # Remove gnome-online-accounts and related packages
+    sudo apt purge -y gnome-online-accounts gnome-control-center-data
+    # Remove autostart entry if present
+    autostart_dir="/etc/xdg/autostart"
+    if [ -f "$autostart_dir/gnome-online-accounts-panel.desktop" ]; then
+        sudo rm "$autostart_dir/gnome-online-accounts-panel.desktop"
+    fi
+    # Kill any running goa-daemon
+    pkill -f goa-daemon
+    success "Online Accounts integration disabled."
+else
+    warn "Skipped disabling Online Accounts integration."
+fi
+
 # Disable Reporting and Telemetry
 if ! [ "$auto_mode" = "true" ]; then
     zenity --question --text="Disable Reporting and Telemetry?" --no-wrap
@@ -364,6 +391,7 @@ if ! [ "$auto_mode" = "true" ]; then
     fi
 fi
 
+# Double confirmation, really make sure you know what you're doing
 if [ "$harden_ssh" = "true" ]; then
     zenity --question --text="Are you sure? This will change your SSH configuration and port." --no-wrap
     if [ $? != 0 ]; then
