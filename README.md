@@ -23,6 +23,7 @@ All of these are optional, you can pick what you want to do:
 - **Optimizes**: Improves performance, boot time, and configures for portable use
 - **Secures**: Updates, disables telemetry, and configures firewall
 - **Hardens**: SSH and firewall hardening (with double confirmation for SSH)
+- **Disables Online Accounts**: Disables GNOME Online Accounts and related integration
 - **Installs**: Lets you define a custom list of programs to install
 - **Automates**: Set `auto=true` in `config.txt` for unattended, fully automatic runs
 
@@ -47,6 +48,7 @@ options/portable_use=false
 options/disable_flatpak=false
 options/optimize_boot=true
 options/disable_telemetry=true
+options/disable_online_accounts=true
 options/configure_firewall=true
 options/harden_ssh=false
 options/update_system=true
@@ -57,7 +59,7 @@ options/reboot_system=false
 
 ## How to Use
 
-1. **Edit `config.txt`** to select which actions to perform. All options are explained in comments above.
+1. **Edit `config.txt`** to select which actions to perform.
 2. **Run the script as root**: `sudo ./debloat-mint.sh`
 3. **Follow the prompts** (unless in auto mode). Confirm or skip each action.
 
@@ -72,4 +74,4 @@ options/reboot_system=false
 - `zenity`, `timeshift`, `ufw` (script will check and warn if missing)
 
 ## Credits
-Based on a hard fork of [aaron-dev-git/Linux-Mint-Debloater](https://github.com/aaron-dev-git/Linux-Mint-Debloater). Enhanced for configurability, safety, and user experience.
+This is a hard fork of [aaron-dev-git/Linux-Mint-Debloater](https://github.com/aaron-dev-git/Linux-Mint-Debloater).
