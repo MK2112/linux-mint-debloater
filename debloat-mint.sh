@@ -1,4 +1,5 @@
 #!/bin/bash
+# Version: 1.0.0
 
 # Check for required dependencies
 for dep in zenity timeshift ufw; do
@@ -16,11 +17,57 @@ BLUE="\033[1;34m"
 CYAN="\033[1;36m"
 RESET="\033[0m"
 
-# Color functions
-info()    { echo -e "${CYAN}[i] $1${RESET}"; }
-success() { echo -e "${GREEN}[+] $1${RESET}"; }
-warn()    { echo -e "${YELLOW}[~] $1${RESET}"; }
-error()   { echo -e "${RED}[-] $1${RESET}"; }
+# Self-Update Helper
+REPO_URL="https://raw.githubusercontent.com/MK2112/linux-mint-debloater/main/debloat-mint.sh"
+LOCAL_SCRIPT="$0"
+
+# Get version from script
+get_version() {
+    grep '^# Version:' "$1" | head -n1 | awk '{print $3}'
+}
+
+# Logging
+log() {
+    local msg="$1"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $msg" | tee -a debloat.log
+}
+
+# Color Functions
+info()    { echo -e "${CYAN}[i] $1${RESET}"; log "INFO: $1"; }
+success() { echo -e "${GREEN}[+] $1${RESET}"; log "SUCCESS: $1"; }
+warn()    { echo -e "${YELLOW}[~] $1${RESET}"; log "WARN: $1"; }
+error()   { echo -e "${RED}[-] $1${RESET}"; log "ERROR: $1"; }
+
+LOCAL_VERSION=$(get_version "$LOCAL_SCRIPT")
+REMOTE_VERSION=$(curl -fsSL "$REPO_URL" | grep '^# Version:' | head -n1 | awk '{print $3}')
+
+if [ -n "$REMOTE_VERSION" ] && [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
+    log "Update available: $LOCAL_VERSION -> $REMOTE_VERSION"
+    zenity --question --title="Update Available" --text="A new version ($REMOTE_VERSION) is available.\nUpdate now?" --no-wrap
+    if [ $? -eq 0 ]; then
+        TMP_UPDATE="/tmp/debloat-mint.sh.update.$$"
+        if curl -fsSL "$REPO_URL" -o "$TMP_UPDATE"; then
+            # Optionally check if the update is valid (e.g., sanity check for bash header)
+            if grep -q '^#!/bin/bash' "$TMP_UPDATE"; then
+                cp "$LOCAL_SCRIPT" "$LOCAL_SCRIPT.bak"
+                mv "$TMP_UPDATE" "$LOCAL_SCRIPT"
+                chmod +x "$LOCAL_SCRIPT"
+                log "Script updated to version $REMOTE_VERSION. Please re-run."
+                zenity --info --title="Updated" --text="Script updated to $REMOTE_VERSION. Run chmod +x on the new file, then please re-run the script." --no-wrap
+                exit 0
+            else
+                log "Update failed: Downloaded file is not a valid script."
+                zenity --error --title="Update Failed" --text="Downloaded file is not a valid script." --no-wrap
+                rm -f "$TMP_UPDATE"
+            fi
+        else
+            log "Update failed: Could not download new version."
+            zenity --error --title="Update Failed" --text="Could not download new version." --no-wrap
+        fi
+    else
+        log "User chose not to update."
+    fi
+fi
 
 # Checking privileges
 if [ "$EUID" -ne 0 ]; then
@@ -95,40 +142,63 @@ if ! [ "$auto_mode" = "true" ]; then
 fi
 
 if [ "$debloat" = "true" ]; then
- 	# Purging these programs (delete from list if program should stay)
-	programs=(
-	    mintwelcome			# Welcome screen
-	    redshift			# Screen Color adjustment tool for eye strain reduction
-	    libreoffice-core	# Core components of LibreOffice
-	    libreoffice-common	# Common files for LibreOffice
-	    transmission-gtk	# BitTorrent client
-	    hexchat				# Internet Relay Chat client
-	    baobab				# Disk usage analyzer
-	    seahorse			# GNOME frontend for GnuPG
-	    thunderbird			# Email and news client
-	    rhythmbox			# Music player
-	    pix					# Image viewer and browser
-	    simple-scan			# Scanning utility
-	    drawing				# Drawing application
-	    gnote				# Note-taking application
-	    xreader				# Document viewer
-	    onboard				# On-screen keyboard
-	    celluloid			# Video player
-		gnome-calendar		# Calendar application
-		gnome-contacts		# Contacts manager
-	    gnome-logs			# Log viewer for the systemd 
-	    gnome-power-manager	# GNOME desktop Power management tool
-	    warpinator			# Tool for local network file sharing
-	)
+    log "Starting debloat process."
+    # Purging these programs (delete from list if program should stay)
+    programs=(
+        mintwelcome            # Welcome screen
+        redshift               # Screen Color adjustment tool for eye strain reduction
+        libreoffice-core       # Core components of LibreOffice
+        libreoffice-common     # Common files for LibreOffice
+        transmission-gtk       # BitTorrent client
+        hexchat                # Internet Relay Chat client
+        baobab                 # Disk usage analyzer
+        seahorse               # GNOME frontend for GnuPG
+        thunderbird            # Email and news client
+        rhythmbox              # Music player
+        pix                    # Image viewer and browser
+        simple-scan            # Scanning utility
+        drawing                # Drawing application
+        gnote                  # Note-taking application
+        xreader                # Document viewer
+        onboard                # On-screen keyboard
+        celluloid              # Video player
+        gnome-calendar         # Calendar application
+        gnome-contacts         # Contacts manager
+        gnome-logs             # Log viewer for the systemd 
+        gnome-power-manager    # GNOME desktop Power management tool
+        warpinator             # Tool for local network file sharing
+    )
 
-	for program in "${programs[@]}"; do
-	    sudo apt purge "$program" -y
-	done
+    for program in "${programs[@]}"; do
+        log "Purging package: $program"
+        sudo apt purge "$program" -y | tee -a debloat.log
+        if [ $? -eq 0 ]; then
+            log "Purged $program successfully."
+        else
+            log "Failed to purge $program."
+        fi
+    done
 
-	sudo apt autoremove -y && sudo apt clean
- 	success "System Debloated."
+    # Check for orphaned packages
+    orphans=$(apt autoremove --dry-run | grep '^  ' | awk '{print $1}')
+    if [ -n "$orphans" ]; then
+        log "Orphaned packages found: $orphans"
+        zenity --question --title="Orphaned Packages" --text="Orphaned packages detected:\n$orphans\n\nRemove them now?" --no-wrap
+        if [ $? -eq 0 ]; then
+            log "Removing orphaned packages: $orphans"
+            sudo apt autoremove -y | tee -a debloat.log
+            sudo apt clean | tee -a debloat.log
+            success "Orphaned packages removed."
+        else
+            warn "User chose not to remove orphaned packages."
+        fi
+    else
+        log "No orphaned packages found after debloat."
+        sudo apt clean | tee -a debloat.log
+    fi
+    success "System Debloated."
 else
-	warn "Skipped System Debloat."
+    warn "Skipped System Debloat."
 fi
 
 # Portable Optimization
@@ -155,9 +225,9 @@ if [ "$portable_use" = "true" ]; then
 	sudo systemctl start tlp
 	
 	# Powertop - Auto Tune (if running on battery)
-	if $(cat /sys/class/power_supply/AC/online) = 0; then
-		sudo powertop --auto-tune
-	fi
+	if [ "$(cat /sys/class/power_supply/AC/online)" = "0" ]; then
+	sudo powertop --auto-tune
+fi
 
 	# TLP - Configuration
 	sudo sed -i \
