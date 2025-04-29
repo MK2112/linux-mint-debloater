@@ -99,12 +99,12 @@ if [ "$auto_mode" = "true" ]; then
 	update_system=$(read_config "options/update_system")
 	install_programs=$(read_config "options/install_programs")
 	reboot_system=$(read_config "options/reboot_system")
+	remove_duplicates_path=$(read_config "options/remove_duplicates_path")
 else
 	success "Running In Manual Mode."
 	warn "Change value of 'auto' to 'true' in config.txt to enable auto mode."
 	echo
 fi
-
 
 # Create Snapshot
 if ! [ "$auto_mode" = "true" ]; then
@@ -570,6 +570,36 @@ if [ "$install_programs" = "true" ]; then
 	done
 else
 	warn "Skipped Program Installations."
+fi
+
+# Remove Duplicates from PATH
+if ! [ "$auto_mode" = "true" ]; then
+    zenity --question --text="Remove Duplicates from \$PATH?" --no-wrap
+    if [ $? = 0 ]; then
+        remove_duplicates_path="true"
+    else
+        remove_duplicates_path="false"
+    fi
+fi
+
+# Remove $PATH Duplicates
+if [ "$remove_duplicates_path" = "true" ]; then
+    OLD_IFS=$IFS
+    IFS=:
+    NEWPATH=
+    unset EXISTS
+    declare -A EXISTS
+    for p in $PATH; do
+        if [ -z "${EXISTS[$p]}" ]; then
+            NEWPATH=${NEWPATH:+$NEWPATH:}$p
+            EXISTS[$p]=yes
+        fi
+    done
+    IFS=$OLD_IFS
+    export PATH=$NEWPATH
+    success "Removed duplicate entries from \$PATH."
+else
+    warn "Skipped removing duplicates from \$PATH."
 fi
 
 # Reboot System
