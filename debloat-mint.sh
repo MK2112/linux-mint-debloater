@@ -597,6 +597,7 @@ if [ "$remove_duplicates_path" = "true" ]; then
     done
     IFS=$OLD_IFS
     export PATH=$NEWPATH
+    unset EXISTS
     success "Removed duplicate entries from \$PATH."
 else
     warn "Skipped removing duplicates from \$PATH."
