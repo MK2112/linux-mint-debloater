@@ -1,6 +1,6 @@
 # Linux Mint Debloater
 
-Streamline and optimize your Linux Mint 22.1, 22 or 21.3.
+Streamline and optimize your Linux Mint.
 
 ```bash
 sudo apt install -y git
@@ -42,20 +42,20 @@ The lists for programs to be removed or installed are editable in the `debloat-m
 Example:
 ```ini
 auto=false
-options/create_snapshot=true
-options/debloat=true
+options/create_snapshot=false
+options/debloat=false
 options/portable_use=false
 options/disable_flatpak=false
-options/optimize_boot=true
-options/disable_telemetry=true
-options/disable_online_accounts=true
-options/configure_firewall=true
+options/optimize_boot=false
+options/disable_telemetry=false
+options/configure_firewall=false
 options/harden_ssh=false
-options/update_system=true
-options/install_programs=true
+options/update_system=false
+options/install_programs=false
 options/reboot_system=false
+options/remove_duplicates_path=false
 ```
-**`auto`**: Set to `true` for automated runs (no prompts)
+**`auto`**: Set to `true` for automated runs (no prompts, executing as specified in `config.txt`)
 
 ## How to Use
 
@@ -69,9 +69,9 @@ options/reboot_system=false
 - **SSH Hardening:** Double-confirmation prevents accidental lockout. Read the prompts carefully!
 
 ## Requirements
-- Linux Mint (21.3, 22, 22.1)
+- Linux Mint
 - Root privileges
-- `zenity`, `timeshift`, `ufw` (script will check and warn if missing)
+- `zenity`, `timeshift`, `ufw` (script will check and warn if missing, they are pre-installed on Mint though)
 
 ## Credits
 This is a hard fork of [aaron-dev-git/Linux-Mint-Debloater](https://github.com/aaron-dev-git/Linux-Mint-Debloater).
