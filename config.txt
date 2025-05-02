@@ -11,3 +11,4 @@ options/update_system=false
 options/install_programs=false
 options/reboot_system=false
 options/remove_duplicates_path=false
+options/services_to_disable=bluetooth,cups
