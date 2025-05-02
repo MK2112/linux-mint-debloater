@@ -1,5 +1,5 @@
 #!/bin/bash
-# Version: 1.0.0
+# Version: 1.0.1
 
 # Check for required dependencies
 for dep in zenity timeshift ufw; do
@@ -100,6 +100,7 @@ if [ "$auto_mode" = "true" ]; then
 	install_programs=$(read_config "options/install_programs")
 	reboot_system=$(read_config "options/reboot_system")
 	remove_duplicates_path=$(read_config "options/remove_duplicates_path")
+    services_to_disable=$(read_config "options/services_to_disable")
 else
 	success "Running In Manual Mode."
 	warn "Change value of 'auto' to 'true' in config.txt to enable auto mode."
@@ -525,6 +526,69 @@ else
 	warn "Skipped Update."
 fi
 
+# Remove $PATH Duplicates
+if ! [ "$auto_mode" = "true" ]; then
+    zenity --question --text="Remove Duplicates from \$PATH?" --no-wrap
+    if [ $? = 0 ]; then
+        remove_duplicates_path="true"
+    else
+        remove_duplicates_path="false"
+    fi
+fi
+
+if [ "$remove_duplicates_path" = "true" ]; then
+    OLD_IFS=$IFS
+    IFS=:
+    NEWPATH=
+    unset EXISTS
+    declare -A EXISTS
+    for p in $PATH; do
+        if [ -z "${EXISTS[$p]}" ]; then
+            NEWPATH=${NEWPATH:+$NEWPATH:}$p
+            EXISTS[$p]=yes
+        fi
+    done
+    IFS=$OLD_IFS
+    export PATH=$NEWPATH
+    unset EXISTS
+    success "Removed duplicate entries from \$PATH."
+else
+    warn "Skipped removing duplicates from \$PATH."
+fi
+
+# Disable Selected Services
+if [ "$auto_mode" = "true" ]; then
+    if [ -n "$services_to_disable" ]; then
+        IFS=',' read -ra SERVICES <<< "$services_to_disable"
+        for svc in "${SERVICES[@]}"; do
+            svc_trimmed=$(echo "$svc" | xargs)  # Trim whitespace
+            if systemctl list-unit-files | grep -q "^$svc_trimmed.service"; then
+                sudo systemctl disable "$svc_trimmed"
+                success "Disabled $svc_trimmed.service"
+            else
+                warn "Service $svc_trimmed.service not found."
+            fi
+        done
+    else
+        warn "No services listed to disable in config."
+    fi
+else
+    echo "Available enabled services:"
+    systemctl list-unit-files --type=service | grep enabled
+    read -p "Enter the name of a service to disable (or press Enter to continue): " svc
+
+    while [[ ! -z "$svc" ]]; do
+        if systemctl list-unit-files | grep -q "^$svc.service"; then
+            sudo systemctl disable "$svc"
+            success "Disabled $svc.service"
+        else
+            warn "Service $svc.service not found."
+        fi
+        read -p "Enter the name of another service to disable (or press Enter to continue): " svc
+    done
+    success "Disabled selected services."
+fi
+
 # Install Programs
 if ! [ "$auto_mode" = "true" ]; then
     zenity --question --text="Install Programs From List?" --no-wrap
@@ -570,37 +634,6 @@ if [ "$install_programs" = "true" ]; then
 	done
 else
 	warn "Skipped Program Installations."
-fi
-
-# Remove Duplicates from PATH
-if ! [ "$auto_mode" = "true" ]; then
-    zenity --question --text="Remove Duplicates from \$PATH?" --no-wrap
-    if [ $? = 0 ]; then
-        remove_duplicates_path="true"
-    else
-        remove_duplicates_path="false"
-    fi
-fi
-
-# Remove $PATH Duplicates
-if [ "$remove_duplicates_path" = "true" ]; then
-    OLD_IFS=$IFS
-    IFS=:
-    NEWPATH=
-    unset EXISTS
-    declare -A EXISTS
-    for p in $PATH; do
-        if [ -z "${EXISTS[$p]}" ]; then
-            NEWPATH=${NEWPATH:+$NEWPATH:}$p
-            EXISTS[$p]=yes
-        fi
-    done
-    IFS=$OLD_IFS
-    export PATH=$NEWPATH
-    unset EXISTS
-    success "Removed duplicate entries from \$PATH."
-else
-    warn "Skipped removing duplicates from \$PATH."
 fi
 
 # Reboot System
