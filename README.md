@@ -12,7 +12,7 @@ chmod +x debloat-mint.sh
 sudo ./debloat-mint.sh
 ```
 
-> **Supported:** Linux Mint 21.3, 22, 22.1 (tested)
+> **Supported:** Linux Mint 21.3, 22, 22.1, 22.2
 
 ## Functionality
 
