@@ -23,6 +23,7 @@ All of these are optional, you can pick what you want to do:
 - **Optimizes**: Improves performance, boot time, and configures for portable use
 - **Secures**: Updates, disables telemetry, and configures firewall
 - **Hardens**: SSH and firewall hardening (with double confirmation for SSH)
+- **Encrypts**: DNS traffic encryption for IPv4 and IPv6
 - **Disables Online Accounts**: Disables GNOME Online Accounts and related integration
 - **Installs**: Lets you define a custom list of programs to install
 - **Automates**: Set `auto=true` in `config.txt` for unattended, fully automatic runs
