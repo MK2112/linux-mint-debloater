@@ -7,6 +7,7 @@ options/optimize_boot=false
 options/disable_telemetry=false
 options/configure_firewall=false
 options/harden_ssh=false
+options/encrypt_dns=false
 options/update_system=false
 options/install_programs=false
 options/reboot_system=false
