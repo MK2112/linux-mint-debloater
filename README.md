@@ -1,6 +1,6 @@
-# Linux Mint Debloater
+# Linux Mint / Ubuntu Debloater
 
-Streamline and optimize your Linux Mint.
+Streamline and optimize your Linux Mint or Ubuntu.
 
 ```bash
 sudo apt install -y git
@@ -12,7 +12,9 @@ chmod +x debloat-mint.sh
 sudo ./debloat-mint.sh
 ```
 
-> **Supported:** Linux Mint 21.3, 22, 22.1, 22.2
+**Supported:**
+- Linux Mint 21.3, 22, 22.1, 22.2
+- Ubuntu 24.04 LTS, 24.10, 25.04
 
 ## Functionality
 
@@ -71,9 +73,9 @@ options/remove_duplicates_path=false
 - **SSH Hardening:** Double-confirmation prevents accidental lockout. Read the prompts carefully!
 
 ## Requirements
-- Linux Mint
+- Linux Mint or Ubuntu installed
 - Root privileges
-- `zenity`, `timeshift`, `ufw` (script will check and warn if missing, they are pre-installed on Mint though)
+- `zenity`, `timeshift`, `ufw` (script will check and warn if missing, they are pre-installed on Mint and Ubuntu)
 
 ## Credits
 This is a hard fork of [aaron-dev-git/Linux-Mint-Debloater](https://github.com/aaron-dev-git/Linux-Mint-Debloater).
