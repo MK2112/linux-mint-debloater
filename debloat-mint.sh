@@ -573,21 +573,6 @@ if [ "$auto_mode" = "true" ]; then
     else
         warn "No services listed to disable in config."
     fi
-else
-    echo "Available enabled services:"
-    systemctl list-unit-files --type=service | grep enabled
-    read -p "Enter the name of a service to disable (or press Enter to continue): " svc
-
-    while [[ ! -z "$svc" ]]; do
-        if systemctl list-unit-files | grep -q "^$svc.service"; then
-            sudo systemctl disable "$svc"
-            success "Disabled $svc.service"
-        else
-            warn "Service $svc.service not found."
-        fi
-        read -p "Enter the name of another service to disable (or press Enter to continue): " svc
-    done
-    success "Disabled selected services."
 fi
 
 # Encrypt DNS Traffic
@@ -601,48 +586,62 @@ if ! [ "$auto_mode" = "true" ]; then
 fi
 
 if [ "$encrypt_dns" = "true" ]; then
-    sudo apt-get install -y dnscrypt-proxy
-	sudo systemctl enable dnscrypt-proxy
-	sudo systemctl start dnscrypt-proxy
 
- 	# Configure dnscrypt-proxy for dual stack (IPv4 & IPv6)
-	CONFIG_FILE="/etc/dnscrypt-proxy/dnscrypt-proxy.toml"
-	
-	sudo sed -i "s|listen_addresses = .*|listen_addresses = ['127.0.0.1:53', '[::1]:53']|g" $CONFIG_FILE
-	sudo sed -i "s|# ipv6_servers = .*|ipv6_servers = true|g" $CONFIG_FILE
-	
-	# Restart service to apply changes
-	sudo systemctl restart dnscrypt-proxy
-	
-	# Set local DNS resolver for network interfaces (IPv4 & IPv6)
-	for dev in $(nmcli device | awk '/connected/ {print $1}'); do
-		sudo nmcli device modify "$dev" ipv4.dns "127.0.0.1"
-		sudo nmcli device modify "$dev" ipv6.dns "::1"
-	done
-	
-	# Apply network changes
-	sudo nmcli connection reload
-	sudo nmcli connection up $(nmcli connection show --active | grep -v NAME | awk '{print $1}')
+    # If using UFW, add rules for dnscrypt-proxy
+    if command -v ufw &> /dev/null; then
+        sudo ufw allow in on lo to 127.0.0.1 port 53 proto udp
+        sudo ufw allow in on lo to 127.0.0.1 port 53 proto tcp
+        sudo ufw allow in on lo to ::1 port 53 proto udp
+        sudo ufw allow in on lo to ::1 port 53 proto tcp
+    fi
 
-    success "DNS encryption is now enabled via dnscrypt-proxy. You can confirm encryption taking place by running 'dig txt debug.opendns.com'."
+    # Setup for DNS over TLS with Cloudflare DNS and Google as fallback
+    echo "Configuring DNS over TLS, Cloudflare's 1.1.1.1 will become primary, Google's 8.8.8.8 will become fallback..."
+    sudo cp /etc/systemd/resolved.conf /etc/systemd/resolved.conf.bak
+    echo -e "[Resolve]\nDNS=1.1.1.1 2606:4700:4700::1111\nDNSOverTLS=yes\nFallbackDNS=8.8.8.8 2001:4860:4860::8888\nDomains=~." | sudo tee /etc/systemd/resolved.conf > /dev/null
+    sudo systemctl restart systemd-resolved
+    # Ensuring /etc/resolv.conf points to systemd's stub resolver
+    sudo ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+    # Check status of systemd-resolved
+    systemd_status=$(systemctl is-active systemd-resolved)
+    if ! [ "$systemd_status" == "active" ]; then
+        echo "Error: systemd-resolved is not running."
+        exit 1
+    fi
+    echo "DNS over TLS has been successfully configured with Cloudflare's DNS!"
+    echo "You can verify your DNS provider by visiting https://ipleak.net/."
 
- 	# To undo this:
-  	# Stop and disable dnscrypt-proxy
-	#sudo systemctl stop dnscrypt-proxy
-	#sudo systemctl disable dnscrypt-proxy
-	#sudo apt-get purge -y dnscrypt-proxy
-	# Restore NetworkManager's DNS settings to automatic (DHCP)
-	#for dev in $(nmcli device | awk '/connected/ {print $1}'); do
-	#    sudo nmcli device modify "$dev" ipv4.ignore-auto-dns no
-	#    sudo nmcli device modify "$dev" ipv4.dns ""
-	#    sudo nmcli device modify "$dev" ipv6.ignore-auto-dns no
-	#    sudo nmcli device modify "$dev" ipv6.dns ""
-	#done
-	# Apply network changes
-	#sudo nmcli connection reload
-	#sudo nmcli connection up $(nmcli connection show --active | grep -v NAME | awk '{print $1}')
-	
-	echo "DNS and service settings have been restored to default. A reboot is recommended."
+    ## TO UNDO THIS:
+    # Reversing the UFW rules for dnscrypt-proxy
+    #if command -v ufw &> /dev/null; then
+    #    sudo ufw delete allow in on lo to 127.0.0.1 port 53 proto udp
+    #    sudo ufw delete allow in on lo to 127.0.0.1 port 53 proto tcp
+    #    sudo ufw delete allow in on lo to ::1 port 53 proto udp
+    #    sudo ufw delete allow in on lo to ::1 port 53 proto tcp
+    #fi
+    #if [ -f /etc/systemd/resolved.conf.bak ]; then
+    #    sudo cp /etc/systemd/resolved.conf.bak /etc/systemd/resolved.conf
+    #else
+    #    echo "Error: Backup file /etc/systemd/resolved.conf.bak not found."
+    #    exit 1
+    #fi
+    #sudo sed -i '/DNSOverTLS=yes/d' /etc/systemd/resolved.conf
+    #sudo systemctl restart systemd-resolved
+    # Removing the symlink and restoring default resolv.conf if needed
+    #if [ -L /etc/resolv.conf ]; then
+    #    sudo rm /etc/resolv.conf
+    #fi
+    #echo "nameserver 127.0.0.53" | sudo tee /etc/resolv.conf > /dev/null
+    #sudo systemctl stop systemd-resolved
+    #sudo systemctl disable systemd-resolved
+    #systemd_status=$(systemctl is-active systemd-resolved)
+    #if [ "$systemd_status" == "inactive" ]; then
+    #    echo "systemd-resolved has been successfully stopped."
+    #else
+    #    echo "Error: systemd-resolved is still running."
+    #    exit 1
+    #fi
+    #echo "DNS over TLS has been successfully reverted. DNS queries are no longer encrypted."
 else
     warn "Skipped DNS encryption."
 fi
