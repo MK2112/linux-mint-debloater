@@ -96,6 +96,7 @@ if [ "$auto_mode" = "true" ]; then
 	disable_telemetry=$(read_config "options/disable_telemetry")
 	configure_firewall=$(read_config "options/configure_firewall")
 	harden_ssh=$(read_config "options/harden_ssh")
+ 	encrypt_dns=$(read_config "options/encrypt_dns")
 	update_system=$(read_config "options/update_system")
 	install_programs=$(read_config "options/install_programs")
 	reboot_system=$(read_config "options/reboot_system")
@@ -587,6 +588,63 @@ else
         read -p "Enter the name of another service to disable (or press Enter to continue): " svc
     done
     success "Disabled selected services."
+fi
+
+# Encrypt DNS Traffic
+if ! [ "$auto_mode" = "true" ]; then
+    zenity --question --text="Encrypt DNS Traffic?" --no-wrap
+    if [ $? = 0 ]; then
+        encrypt_dns="true"
+    else
+        encrypt_dns="false"
+    fi
+fi
+
+if [ "$encrypt_dns" = "true" ]; then
+    sudo apt-get install -y dnscrypt-proxy
+	sudo systemctl enable dnscrypt-proxy
+	sudo systemctl start dnscrypt-proxy
+
+ 	# Configure dnscrypt-proxy for dual stack (IPv4 & IPv6)
+	CONFIG_FILE="/etc/dnscrypt-proxy/dnscrypt-proxy.toml"
+	
+	sudo sed -i "s|listen_addresses = .*|listen_addresses = ['127.0.0.1:53', '[::1]:53']|g" $CONFIG_FILE
+	sudo sed -i "s|# ipv6_servers = .*|ipv6_servers = true|g" $CONFIG_FILE
+	
+	# Restart service to apply changes
+	sudo systemctl restart dnscrypt-proxy
+	
+	# Set local DNS resolver for network interfaces (IPv4 & IPv6)
+	for dev in $(nmcli device | awk '/connected/ {print $1}'); do
+		sudo nmcli device modify "$dev" ipv4.dns "127.0.0.1"
+		sudo nmcli device modify "$dev" ipv6.dns "::1"
+	done
+	
+	# Apply network changes
+	sudo nmcli connection reload
+	sudo nmcli connection up $(nmcli connection show --active | grep -v NAME | awk '{print $1}')
+
+    success "DNS encryption is now enabled via dnscrypt-proxy. You can confirm encryption taking place by running 'dig txt debug.opendns.com'."
+
+ 	# To undo this:
+  	# Stop and disable dnscrypt-proxy
+	#sudo systemctl stop dnscrypt-proxy
+	#sudo systemctl disable dnscrypt-proxy
+	#sudo apt-get purge -y dnscrypt-proxy
+	# Restore NetworkManager's DNS settings to automatic (DHCP)
+	#for dev in $(nmcli device | awk '/connected/ {print $1}'); do
+	#    sudo nmcli device modify "$dev" ipv4.ignore-auto-dns no
+	#    sudo nmcli device modify "$dev" ipv4.dns ""
+	#    sudo nmcli device modify "$dev" ipv6.ignore-auto-dns no
+	#    sudo nmcli device modify "$dev" ipv6.dns ""
+	#done
+	# Apply network changes
+	#sudo nmcli connection reload
+	#sudo nmcli connection up $(nmcli connection show --active | grep -v NAME | awk '{print $1}')
+	
+	echo "DNS and service settings have been restored to default. A reboot is recommended."
+else
+    warn "Skipped DNS encryption."
 fi
 
 # Install Programs
