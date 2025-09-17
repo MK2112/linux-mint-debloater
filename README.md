@@ -8,8 +8,8 @@ sudo apt install -y git
 git clone https://github.com/MK2112/linux-mint-debloater.git
 cd linux-mint-debloater
 # Execute the script
-chmod +x debloat-mint.sh
-sudo ./debloat-mint.sh
+chmod +x debloat.sh
+sudo ./debloat.sh
 ```
 
 **Supported:**
@@ -64,7 +64,7 @@ options/remove_duplicates_path=false
 ## How to Use
 
 1. **Edit `config.txt`** to select which actions to perform.
-2. **Run the script as root**: `sudo ./debloat-mint.sh`
+2. **Run the script as root**: `sudo ./debloat.sh`
 3. **Follow the prompts** (unless in auto mode). Confirm or skip each action.
 
 ## Tips
