@@ -596,9 +596,9 @@ if [ "$encrypt_dns" = "true" ]; then
     fi
 
     # Setup for DNS over TLS with Cloudflare DNS and Google as fallback
-    echo "Configuring DNS over TLS, Cloudflare's 1.1.1.1 will become primary, Google's 8.8.8.8 will become fallback..."
+    echo "Configuring DNS over TLS, Quad9's 9.9.9.9 will become primary, Cloudflare's 1.1.1.1 will become fallback..."
     sudo cp /etc/systemd/resolved.conf /etc/systemd/resolved.conf.bak
-    echo -e "[Resolve]\nDNS=1.1.1.1 2606:4700:4700::1111\nDNSOverTLS=yes\nFallbackDNS=8.8.8.8 2001:4860:4860::8888\nDomains=~." | sudo tee /etc/systemd/resolved.conf > /dev/null
+    echo -e "[Resolve]\nDNS=9.9.9.9 2620:fe::fe\nFallbackDNS=1.1.1.1 2606:4700:4700::1111\nDomains=~.\nDNSOverTLS=yes\nDNSSEC=yes\n" | sudo tee /etc/systemd/resolved.conf > /dev/null
     sudo systemctl restart systemd-resolved
     # Ensuring /etc/resolv.conf points to systemd's stub resolver
     sudo ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
