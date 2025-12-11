@@ -14,7 +14,7 @@ sudo ./debloat.sh
 
 **Supported:**
 - Linux Mint 21.3, 22, 22.1, 22.2
-- Ubuntu 24.04 LTS, 24.10, 25.04
+- Ubuntu 24.04 LTS, 24.10, 25.04, 25.10
 
 ## Functionality
 
