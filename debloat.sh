@@ -1,7 +1,6 @@
 #!/bin/bash
 # Version: 1.0.1
 
-# Check for required dependencies
 for dep in zenity timeshift ufw; do
     if ! command -v "$dep" >/dev/null 2>&1; then
         echo -e "\033[1;31m[ERROR]\033[0m Required dependency '$dep' not installed. Please install, then re-run this script."
@@ -17,22 +16,18 @@ BLUE="\033[1;34m"
 CYAN="\033[1;36m"
 RESET="\033[0m"
 
-# Self-Update Helper
 REPO_URL="https://raw.githubusercontent.com/MK2112/linux-mint-debloater/main/debloat-mint.sh"
 LOCAL_SCRIPT="$0"
 
-# Get version from script
 get_version() {
     grep '^# Version:' "$1" | head -n1 | awk '{print $3}'
 }
 
-# Logging
 log() {
     local msg="$1"
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $msg" | tee -a debloat.log
 }
 
-# Color Functions
 info()    { echo -e "${CYAN}[i] $1${RESET}"; log "INFO: $1"; }
 success() { echo -e "${GREEN}[+] $1${RESET}"; log "SUCCESS: $1"; }
 warn()    { echo -e "${YELLOW}[~] $1${RESET}"; log "WARN: $1"; }
@@ -69,14 +64,12 @@ if [ -n "$REMOTE_VERSION" ] && [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
     fi
 fi
 
-# Checking privileges
 if [ "$EUID" -ne 0 ]; then
 	error "Please Run As Root."
   	return 1 2>/dev/null
 	exit 1
 fi
 
-# Read config
 read_config() {
     grep "^$1=" config.txt | cut -d'=' -f2- | tr -d '\r' 2>/dev/null
 }
@@ -108,7 +101,6 @@ else
 	echo
 fi
 
-# Create Snapshot
 if ! [ "$auto_mode" = "true" ]; then
     zenity --question --text="Create Snapshot?" --no-wrap
     if [ $? = 0 ]; then
@@ -133,7 +125,6 @@ else
 	warn "Skipped Snapshot Creation."
 fi
 
-# Debloat
 if ! [ "$auto_mode" = "true" ]; then
     zenity --question --text="Debloat?" --no-wrap
     if [ $? = 0 ]; then
@@ -214,23 +205,19 @@ if ! [ "$auto_mode" = "true" ]; then
 fi
 
 if [ "$portable_use" = "true" ]; then
-	# TLP, Powertop, ThermalD - Install
+	# TLP, Powertop, ThermalD
  	sudo apt update && sudo apt upgrade -y
 	sudo apt install -y tlp powertop thermald
-	
-	# Thermald - Start
+	# Thermald
 	sudo systemctl enable thermald
 	sudo systemctl start thermald
-
-	# TLP - Start
+	# TLP
 	sudo systemctl enable tlp
-	sudo systemctl start tlp
-	
+	sudo systemctl start tlp	
 	# Powertop - Auto Tune (if running on battery)
 	if [ "$(cat /sys/class/power_supply/AC/online)" = "0" ]; then
 	sudo powertop --auto-tune
 fi
-
 	# TLP - Configuration
 	sudo sed -i \
  	-e 's/#TLP_ENABLE=0/TLP_ENABLE=1/' \
@@ -256,7 +243,6 @@ fi
 	-e 's/#RUNTIME_PM_ON_BAT=auto/RUNTIME_PM_ON_BAT=auto/' \
 	/etc/tlp.conf
 
-	# Disable Bluetooth on startup
 	BT_CONF_FILE="/etc/bluetooth/main.conf"
 	if [ ! -f "$BT_CONF_FILE" ]; then
 		error "Bluetooth Config Error: $BT_CONF_FILE Does Not Exist."
@@ -272,7 +258,6 @@ fi
     	error "Updating $BT_CONF_FILE Failed. Check Manually."
 	fi
 
-	# Install and configure preload for faster application launch
 	sudo apt install -y preload
 	sudo systemctl enable preload && sudo systemctl start preload
 	sudo apt autoremove -y && sudo apt clean
@@ -317,15 +302,12 @@ if [ "$optimize_boot" = "true" ]; then
 	# Disable GRUB Boot Animations
 	sudo sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/GRUB_CMDLINE_LINUX_DEFAULT="quiet nosplash"/' /etc/default/grub
 	sudo update-grub
-
 	# Reduce tty count used during boot
 	sudo sed -i 's/^#NAutoVTs=6/NAutoVTs=2/' /etc/systemd/logind.conf
 	# Services start 'more concurrently'
 	sudo sed -i 's/#DefaultTimeoutStartSec=90s/DefaultTimeoutStartSec=40s/' /etc/systemd/system.conf
 	sudo sed -i 's/#DefaultTimeoutStopSec=90s/DefaultTimeoutStopSec=40s/' /etc/systemd/system.conf
-	# Systemd daemon-reload
 	sudo systemctl daemon-reload
-	
  	success "Boot Optimization Successful."
 else
 	warn "Skipped Boot Optimization."
@@ -402,9 +384,9 @@ if [ "$disable_telemetry" = "true" ]; then
 		warn "Chromium: Configuration file not found. Not installed or not used."
 	fi	
 
-	# False by default, just making sure
 	gsettings set org.gnome.desktop.privacy send-software-usage-stats false
 	gsettings set org.gnome.desktop.privacy report-technical-problems false
+    gsettings set org.cinnamon.desktop.privacy remember-recent-files false
 else
 	warn "Skipped Reporting and Telemetry."
 fi
@@ -426,11 +408,9 @@ if [ "$configure_firewall" = "true" ]; then
 		sudo ufw --force reset
 	fi
 	
-	# Default rules
     sudo ufw default deny incoming
     sudo ufw default allow outgoing
 
-	# Allow rules
 	declare -A ufw_rules=(
 		["CUPS (Printer)"]="631"
 		["HTTP, HTTPS (TCP)"]="80,443/tcp"
@@ -463,7 +443,7 @@ if ! [ "$auto_mode" = "true" ]; then
     fi
 fi
 
-# Double confirmation, really make sure you know what you're doing
+# Double confirmation on this one
 if [ "$harden_ssh" = "true" ]; then
     zenity --question --text="Are you sure? This will change your SSH configuration and port." --no-wrap
     if [ $? != 0 ]; then
@@ -505,7 +485,6 @@ if [ "$harden_ssh" = "true" ]; then
 
     # Refresh SSH service
     sudo systemctl restart sshd
-
     success "SSH configuration hardened. SSH Port Changed To 2222. Requests To Port 22 Will Be Denied."
 else
     warn "Skipped SSH hardening."
@@ -586,7 +565,6 @@ if ! [ "$auto_mode" = "true" ]; then
 fi
 
 if [ "$encrypt_dns" = "true" ]; then
-
     # If using UFW, add rules for dnscrypt-proxy
     if command -v ufw &> /dev/null; then
         sudo ufw allow in on lo to 127.0.0.1 port 53 proto udp
@@ -595,7 +573,7 @@ if [ "$encrypt_dns" = "true" ]; then
         sudo ufw allow in on lo to ::1 port 53 proto tcp
     fi
 
-    # Setup for DNS over TLS with Cloudflare DNS and Google as fallback
+    # Setup for DNS over TLS with Quad9 and Cloudflare as fallback
     echo "Configuring DNS over TLS, Quad9's 9.9.9.9 will become primary, Cloudflare's 1.1.1.1 will become fallback..."
     sudo cp /etc/systemd/resolved.conf /etc/systemd/resolved.conf.bak
     echo -e "[Resolve]\nDNS=9.9.9.9 2620:fe::fe\nFallbackDNS=1.1.1.1 2606:4700:4700::1111\nDomains=~.\nDNSOverTLS=yes\nDNSSEC=yes\n" | sudo tee /etc/systemd/resolved.conf > /dev/null
@@ -658,7 +636,7 @@ fi
 
 if [ "$install_programs" = "true" ]; then
 	# Just some examples, modify to your needs
-	# Using somewhat cumbersome "apt install -y" for each entry to allow for other custom install commands
+	# Using somewhat cumbersome "apt install -y", but this allows for other custom install commands
 	# (user might want to `curl` or `wget` something, or use `snap` or `flatpak` for some programs, this works here)
 	declare -A tools=(
 		["GParted"]="apt install -y gparted"
