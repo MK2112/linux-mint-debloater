@@ -403,34 +403,32 @@ fi
 
 if [ "$configure_firewall" = "true" ]; then
 	if ! command -v ufw &> /dev/null; then
-        sudo apt install -y ufw
-    else
-		sudo ufw --force reset
-	fi
-	
+        sudo apt install -y ufw || {
+            error "Failed to install ufw."
+            return 1 2>/dev/null
+            exit 1
+        }
+    fi
+
+    sudo ufw --force reset
+    sudo sed -i 's/^IPV6=.*/IPV6=yes/' /etc/default/ufw
+
+    # Default: Deny incoming, allow outgoing, deny routed (forwarded) traffic
     sudo ufw default deny incoming
     sudo ufw default allow outgoing
+    sudo ufw default deny routed
+    sudo ufw logging low
 
-	declare -A ufw_rules=(
-		["CUPS (Printer)"]="631"
-		["HTTP, HTTPS (TCP)"]="80,443/tcp"
-		["HTTP, HTTPS (UDP)"]="80,443/udp"
-		["IMAP (Mail)"]="143,993/tcp"
-		["SMTP (Mail)"]="465,587/tcp"
-		["OpenVPN (TCP)"]="943/tcp"
-		["OpenVPN (UDP)"]="1194/udp"
-		["SSH"]="22"
-		["FTP"]="20,21/tcp"
-	)
-
-	for service in "${!ufw_rules[@]}"; do
-		sudo ufw allow ${ufw_rules[$service]} || echo "Failed to allow $service (${ufw_rules[$service]})"
-	done
+    declare -A ufw_rules=()
+    for service in "${!ufw_rules[@]}"; do
+        sudo ufw allow ${ufw_rules[$service]} || warn "Failed to allow $service (${ufw_rules[$service]})"
+    done
 
     sudo ufw --force enable
+    sudo ufw status verbose
     success "Firewall configured and enabled successfully."
 else
-    warn "Skipped Firewall configuration."
+    warn "Skipped firewall configuration."
 fi
 
 # Harden SSH
