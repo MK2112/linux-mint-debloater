@@ -6,6 +6,7 @@ options/disable_flatpak=false
 options/optimize_boot=false
 options/disable_telemetry=false
 options/configure_firewall=false
+options/net_antispoofing=false
 options/harden_ssh=false
 options/encrypt_dns=false
 options/update_system=false

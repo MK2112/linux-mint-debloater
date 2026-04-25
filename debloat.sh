@@ -1,5 +1,5 @@
 #!/bin/bash
-# Version: 1.0.1
+# Version: 1.0.2
 
 for dep in zenity timeshift ufw; do
     if ! command -v "$dep" >/dev/null 2>&1; then
@@ -88,7 +88,8 @@ if [ "$auto_mode" = "true" ]; then
 	optimize_boot=$(read_config "options/optimize_boot")
 	disable_telemetry=$(read_config "options/disable_telemetry")
 	configure_firewall=$(read_config "options/configure_firewall")
-	harden_ssh=$(read_config "options/harden_ssh")
+	net_antispoofing=$(read_config "options/net_antispoofing")
+    harden_ssh=$(read_config "options/harden_ssh")
  	encrypt_dns=$(read_config "options/encrypt_dns")
 	update_system=$(read_config "options/update_system")
 	install_programs=$(read_config "options/install_programs")
@@ -413,7 +414,7 @@ if [ "$configure_firewall" = "true" ]; then
     sudo ufw --force reset
     sudo sed -i 's/^IPV6=.*/IPV6=yes/' /etc/default/ufw
 
-    # Default: Deny incoming, allow outgoing, deny routed (forwarded) traffic
+    # Default: Deny incoming, allow outgoing, deny routed (forwarded) traffic, standard logging
     sudo ufw default deny incoming
     sudo ufw default allow outgoing
     sudo ufw default deny routed
@@ -431,17 +432,37 @@ else
     warn "Skipped firewall configuration."
 fi
 
-# Harden SSH
+# Kernel-level Anti-Spoofing
+# Prevents IP address spoofing attacks. Does not replace a properly setup firewall.
 if ! [ "$auto_mode" = "true" ]; then
-    zenity --question --text="Harden SSH?" --no-wrap
+    zenity --question --text="Enable Kernel-level Anti-Spoofing?" --no-wrap
     if [ $? = 0 ]; then
-        harden_ssh="true"
+        net_antispoofing="true"
     else
-        harden_ssh="false"
+        net_antispoofing="false"
     fi
 fi
 
-# Double confirmation on this one
+if [ "$net_antispoofing" = "true" ]; then
+    if [ "$net_antispoofing" = "true" ]; then
+    cat <<EOF | sudo tee /etc/sysctl.d/99-antispoof.conf > /dev/null
+net.ipv4.conf.all.rp_filter=1
+net.ipv4.conf.default.rp_filter=1
+net.ipv4.conf.all.accept_redirects=0
+net.ipv4.conf.default.accept_redirects=0
+net.ipv4.conf.all.accept_source_route=0
+net.ipv4.conf.default.accept_source_route=0
+net.ipv4.conf.all.log_martians=0
+net.ipv4.conf.default.log_martians=0
+EOF
+
+    sudo sysctl --system
+    success "Kernel-level anti-spoofing enabled."
+else
+    warn "Skipped kernel-level anti-spoofing."
+fi
+
+# Harden SSH
 if [ "$harden_ssh" = "true" ]; then
     zenity --question --text="Are you sure? This will change your SSH configuration and port." --no-wrap
     if [ $? != 0 ]; then
@@ -451,39 +472,46 @@ if [ "$harden_ssh" = "true" ]; then
 fi
 
 if [ "$harden_ssh" = "true" ]; then
-    # Backup SSH config
-    sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
-	# Move SSH to port 2222
-    sudo sed -i '/^#Port 22/c\Port 2222' /etc/ssh/sshd_config
-	# Disable login on root level
-    sudo sed -i '/^#PermitRootLogin/c\PermitRootLogin no' /etc/ssh/sshd_config
-	# Disable empty passwords
-	sudo sed -i '/^#PermitEmptyPasswords/c\PermitEmptyPasswords no' /etc/ssh/sshd_config
-	# Disable password authentication (use keys only)
-    sudo sed -i '/^#PasswordAuthentication/c\PasswordAuthentication no' /etc/ssh/sshd_config
-	# Disable X11 (GUI) forwarding
-    sudo sed -i '/^#X11Forwarding/c\X11Forwarding no' /etc/ssh/sshd_config
-	# Reduce maximum login attempts to 3
-    sudo sed -i '/^#MaxAuthTries/c\MaxAuthTries 3' /etc/ssh/sshd_config
-	# Disable TCP and Agent forwarding
-    sudo sed -i '/^#AllowTcpForwarding/c\AllowTcpForwarding no' /etc/ssh/sshd_config
-    sudo sed -i '/^#AllowAgentForwarding/c\AllowAgentForwarding no' /etc/ssh/sshd_config
-    
-    # Interval to test connection status
-    echo "ClientAliveInterval 300" | sudo tee -a /etc/ssh/sshd_config
-	# Intervals missed before disconnect
-    echo "ClientAliveCountMax 2" | sudo tee -a /etc/ssh/sshd_config
+    SSHD_CONFIG="/etc/ssh/sshd_config"
+    BACKUP="/etc/ssh/sshd_config.bak.$(date +%F-%H%M%S)"
 
-	# Update firewall rules
-	if command -v ufw &> /dev/null; then
-		sudo ufw allow 2222
-		sudo ufw deny 22
-		sudo ufw reload
-	fi
+    sudo cp "$SSHD_CONFIG" "$BACKUP"
+    sudo mkdir -p /etc/ssh/sshd_config.d
+    sudo tee /etc/ssh/sshd_config.d/99-endpoint-hardening.conf > /dev/null <<EOF
+PermitRootLogin no
+PermitEmptyPasswords no
+MaxAuthTries 3
+X11Forwarding no
+AllowAgentForwarding no
+AllowTcpForwarding no
+ClientAliveInterval 300
+ClientAliveCountMax 2
+Port 2222
+EOF
 
-    # Refresh SSH service
-    sudo systemctl restart sshd
-    success "SSH configuration hardened. SSH Port Changed To 2222. Requests To Port 22 Will Be Denied."
+    if ls ~/.ssh/*.pub >/dev/null 2>&1; then
+        echo "PasswordAuthentication no" | sudo tee -a /etc/ssh/sshd_config.d/99-endpoint-hardening.conf > /dev/null
+    else
+        warn "SSH keys not detected. Leaving password auth enabled."
+    fi
+
+    if command -v ufw &> /dev/null; then
+        sudo ufw allow 2222/tcp
+        sudo ufw delete allow 22/tcp 2>/dev/null || true
+        sudo ufw reload
+    fi
+
+    sudo sshd -t
+    if [ $? -ne 0 ]; then
+        warn "New SSH config invalid. Rolling back."
+        sudo cp "$BACKUP" "$SSHD_CONFIG"
+        sudo rm -f /etc/ssh/sshd_config.d/99-endpoint-hardening.conf
+        sudo systemctl restart sshd
+        warn "SSH restored to previous working state."
+    else
+        sudo systemctl restart sshd
+        success "SSH configuration hardened. Port: 2222"
+    fi
 else
     warn "Skipped SSH hardening."
 fi
