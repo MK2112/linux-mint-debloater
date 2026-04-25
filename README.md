@@ -4,27 +4,27 @@ Streamline and optimize your Linux Mint or Ubuntu.
 
 ```bash
 sudo apt install -y git
-# Clone the repository
+# Clone
 git clone https://github.com/MK2112/linux-mint-debloater.git
 cd linux-mint-debloater
-# Execute the script
+# Run
 chmod +x debloat.sh
 sudo ./debloat.sh
 ```
 
 **Supported:**
 - Linux Mint 21.3, 22, 22.1, 22.2, 22.3
-- Ubuntu 24.04 LTS, 24.10, 25.04, 25.10
+- Ubuntu 24.04, 24.10, 25.04, 25.10, 26.04
 
 ## Functionality
 
 All of these are optional, you can pick what you want to do:
 
 - **Backs up** your system (Timeshift snapshot)
-- **Debloats**: Removes unwanted pre-installed software (fully customizable)
+- **Debloats**: Removes unwanted pre-installed software (customizable)
 - **Optimizes**: Improves performance, boot time, and configures for portable use
 - **Secures**: Updates, disables telemetry, and configures firewall
-- **Hardens**: SSH and firewall hardening (with double confirmation for SSH)
+- **Hardens**: SSH and firewall hardening
 - **Encrypts**: DNS traffic encryption for IPv4 and IPv6
 - **Disables Online Accounts**: Disables GNOME Online Accounts and related integration
 - **Installs**: Lets you define a custom list of programs to install
@@ -52,12 +52,14 @@ options/disable_flatpak=false
 options/optimize_boot=false
 options/disable_telemetry=false
 options/configure_firewall=false
+options/net_antispoofing=false
 options/harden_ssh=false
 options/encrypt_dns=false
 options/update_system=false
 options/install_programs=false
 options/reboot_system=false
 options/remove_duplicates_path=false
+options/services_to_disable=bluetooth,cups
 ```
 **`auto`**: Set to `true` for automated runs (no prompts, executing as specified in `config.txt`)
 
