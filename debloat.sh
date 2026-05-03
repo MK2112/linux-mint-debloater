@@ -16,7 +16,7 @@ BLUE="\033[1;34m"
 CYAN="\033[1;36m"
 RESET="\033[0m"
 
-REPO_URL="https://raw.githubusercontent.com/MK2112/linux-mint-debloater/main/debloat-mint.sh"
+REPO_URL="https://raw.githubusercontent.com/MK2112/linux-mint-debloater/refs/heads/main/debloat.sh"
 LOCAL_SCRIPT="$0"
 
 get_version() {
