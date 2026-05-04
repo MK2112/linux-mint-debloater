@@ -42,13 +42,13 @@ if [ -n "$REMOTE_VERSION" ] && [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
     if [ $? -eq 0 ]; then
         TMP_UPDATE="/tmp/debloat-mint.sh.update.$$"
         if curl -fsSL "$REPO_URL" -o "$TMP_UPDATE"; then
-            # Optionally check if the update is valid (e.g., sanity check for bash header)
+            # Check for update validity
             if grep -q '^#!/bin/bash' "$TMP_UPDATE"; then
                 cp "$LOCAL_SCRIPT" "$LOCAL_SCRIPT.bak"
                 mv "$TMP_UPDATE" "$LOCAL_SCRIPT"
                 chmod +x "$LOCAL_SCRIPT"
                 log "Script updated to version $REMOTE_VERSION. Please re-run."
-                zenity --info --title="Updated" --text="Script updated to $REMOTE_VERSION. Run chmod +x on the new file, then please re-run the script." --no-wrap
+                zenity --info --title="Updated" --text="Script updated to $REMOTE_VERSION. Please re-run the script." --no-wrap
                 exit 0
             else
                 log "Update failed: Downloaded file is not a valid script."
@@ -137,7 +137,8 @@ fi
 
 if [ "$debloat" = "true" ]; then
     log "Starting debloat process."
-    # Purging these programs (delete from list if program should stay)
+    # Purging these programs
+    # Delete from the list below if program should stay
     programs=(
         mintwelcome            # Welcome screen
         redshift               # Screen Color adjustment tool for eye strain reduction
@@ -158,7 +159,7 @@ if [ "$debloat" = "true" ]; then
         celluloid              # Video player
         gnome-calendar         # Calendar application
         gnome-contacts         # Contacts manager
-        gnome-logs             # Log viewer for the systemd 
+        gnome-logs             # Log viewer for the systemd
         gnome-power-manager    # GNOME desktop Power management tool
         warpinator             # Tool for local network file sharing
     )
@@ -209,17 +210,15 @@ if [ "$portable_use" = "true" ]; then
 	# TLP, Powertop, ThermalD
  	sudo apt update && sudo apt upgrade -y
 	sudo apt install -y tlp powertop thermald
-	# Thermald
 	sudo systemctl enable thermald
 	sudo systemctl start thermald
-	# TLP
 	sudo systemctl enable tlp
-	sudo systemctl start tlp	
-	# Powertop - Auto Tune (if running on battery)
+	sudo systemctl start tlp
+	# Powertop Auto Tune (if running on battery)
 	if [ "$(cat /sys/class/power_supply/AC/online)" = "0" ]; then
 	sudo powertop --auto-tune
 fi
-	# TLP - Configuration
+	# TLP Configuration
 	sudo sed -i \
  	-e 's/#TLP_ENABLE=0/TLP_ENABLE=1/' \
 	-e 's/#TLP_DEFAULT_MODE=AC/TLP_DEFAULT_MODE=AC/' \
@@ -383,7 +382,7 @@ if [ "$disable_telemetry" = "true" ]; then
 		sed -i 's/"reporting": {/"reporting": {"enabled": false,/' "$chromium_config"
 	else
 		warn "Chromium: Configuration file not found. Not installed or not used."
-	fi	
+	fi
 
 	gsettings set org.gnome.desktop.privacy send-software-usage-stats false
 	gsettings set org.gnome.desktop.privacy report-technical-problems false
@@ -697,7 +696,7 @@ else
 	warn "Skipped Program Installations."
 fi
 
-# Reboot System
+# Reboot
 if ! [ "$auto_mode" = "true" ]; then
     zenity --question --text="Reboot Now?" --no-wrap
     if [ $? = 0 ]; then
