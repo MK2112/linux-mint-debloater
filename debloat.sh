@@ -88,7 +88,7 @@ if [ "$auto_mode" = "true" ]; then
 	optimize_boot=$(read_config "options/optimize_boot")
 	disable_telemetry=$(read_config "options/disable_telemetry")
 	configure_firewall=$(read_config "options/configure_firewall")
-	net_antispoofing=$(read_config "options/net_antispoofing")
+	net_hardening=$(read_config "options/net_hardening")
     harden_ssh=$(read_config "options/harden_ssh")
  	encrypt_dns=$(read_config "options/encrypt_dns")
 	update_system=$(read_config "options/update_system")
@@ -432,33 +432,50 @@ else
 fi
 
 # Kernel-level Anti-Spoofing
-# Prevents IP address spoofing attacks. Does not replace a properly setup firewall.
+# Prevents IP address spoofing attacks, adds kernel-level network hardening measures.
+# Does not replace a properly setup firewall.
 if ! [ "$auto_mode" = "true" ]; then
-    zenity --question --text="Enable Kernel-level Anti-Spoofing?" --no-wrap
+    zenity --question --text="Enable Kernel-level Network Hardening?" --no-wrap
     if [ $? = 0 ]; then
-        net_antispoofing="true"
+        net_hardening="true"
     else
-        net_antispoofing="false"
+        net_hardening="false"
     fi
 fi
 
-if [ "$net_antispoofing" = "true" ]; then
-    if [ "$net_antispoofing" = "true" ]; then
-    cat <<EOF | sudo tee /etc/sysctl.d/99-antispoof.conf > /dev/null
+if [ "$net_hardening" = "true" ]; then
+    # sudo rm -f /etc/sysctl.d/99-antispoof.conf
+    cat <<EOF | sudo tee /etc/sysctl.d/99-network-hardening.conf > /dev/null
+# Anti-spoofing
 net.ipv4.conf.all.rp_filter=1
 net.ipv4.conf.default.rp_filter=1
+
+# Disable ICMP redirects
 net.ipv4.conf.all.accept_redirects=0
 net.ipv4.conf.default.accept_redirects=0
+
+# Disable source-routed packets
 net.ipv4.conf.all.accept_source_route=0
 net.ipv4.conf.default.accept_source_route=0
-net.ipv4.conf.all.log_martians=0
-net.ipv4.conf.default.log_martians=0
+
+# Disable packet redirects sent by this host
+net.ipv4.conf.all.send_redirects=0
+net.ipv4.conf.default.send_redirects=0
+
+# SYN flood protection
+net.ipv4.tcp_syncookies=1
+
+# Ignore broadcast ICMP requests
+net.ipv4.icmp_echo_ignore_broadcasts=1
+
+# Disable SUID core dumps
+fs.suid_dumpable=0
 EOF
 
     sudo sysctl --system
-    success "Kernel-level anti-spoofing enabled."
+    success "Kernel-level network hardening enabled."
 else
-    warn "Skipped kernel-level anti-spoofing."
+    warn "Skipped kernel-level network hardening."
 fi
 
 # Harden SSH

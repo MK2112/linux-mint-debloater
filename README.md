@@ -13,8 +13,8 @@ sudo ./debloat.sh
 ```
 
 **Supported:**
-- Linux Mint 21.3, 22, 22.1, 22.2, 22.3
-- Ubuntu 24.04, 24.10, 25.04, 25.10, 26.04
+- Linux Mint 21.3 or newer
+- Ubuntu 24.04 or newer
 
 ## Functionality
 
@@ -52,7 +52,7 @@ options/disable_flatpak=false
 options/optimize_boot=false
 options/disable_telemetry=false
 options/configure_firewall=false
-options/net_antispoofing=false
+options/net_hardening=false
 options/harden_ssh=false
 options/encrypt_dns=false
 options/update_system=false
