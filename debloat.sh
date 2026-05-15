@@ -88,7 +88,7 @@ if [ "$auto_mode" = "true" ]; then
 	optimize_boot=$(read_config "options/optimize_boot")
 	disable_telemetry=$(read_config "options/disable_telemetry")
 	configure_firewall=$(read_config "options/configure_firewall")
-	net_hardening=$(read_config "options/net_hardening")
+	harden_net=$(read_config "options/harden_net")
     harden_ssh=$(read_config "options/harden_ssh")
  	encrypt_dns=$(read_config "options/encrypt_dns")
 	update_system=$(read_config "options/update_system")
@@ -437,13 +437,13 @@ fi
 if ! [ "$auto_mode" = "true" ]; then
     zenity --question --text="Enable Kernel-level Network Hardening?" --no-wrap
     if [ $? = 0 ]; then
-        net_hardening="true"
+        harden_net="true"
     else
-        net_hardening="false"
+        harden_net="false"
     fi
 fi
 
-if [ "$net_hardening" = "true" ]; then
+if [ "$harden_net" = "true" ]; then
     # sudo rm -f /etc/sysctl.d/99-antispoof.conf
     cat <<EOF | sudo tee /etc/sysctl.d/99-network-hardening.conf > /dev/null
 # Anti-spoofing
