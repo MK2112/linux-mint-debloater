@@ -1,12 +1,14 @@
 # Linux Mint / Ubuntu Debloater
 
-Streamline and optimize your Linux Mint or Ubuntu.
+Optimize your Linux Mint or Ubuntu.
 
 ```bash
 sudo apt install -y git
+
 # Clone
 git clone https://github.com/MK2112/linux-mint-debloater.git
 cd linux-mint-debloater
+
 # Run
 chmod +x debloat.sh
 sudo ./debloat.sh
@@ -18,17 +20,17 @@ sudo ./debloat.sh
 
 ## Functionality
 
-All of these are optional, you can pick what you want to do:
+You choose what should be done. Capabilities are:
 
-- **Backs up** your system (Timeshift snapshot)
-- **Debloats**: Removes unwanted pre-installed software (customizable)
-- **Optimizes**: Improves performance, boot time, and configures for portable use
-- **Secures**: Updates, disables telemetry, and configures firewall
-- **Hardens**: SSH and firewall hardening
-- **Encrypts**: DNS traffic encryption for IPv4 and IPv6
-- **Disables Online Accounts**: Disables GNOME Online Accounts and related integration
-- **Installs**: Lets you define a custom list of programs to install
-- **Automates**: Set `auto=true` in `config.txt` for unattended, fully automatic runs
+- **Back up** your system (Timeshift snapshot)
+- **Debloat**: Removes unwanted pre-installed software (customizable)
+- **Optimize**: Improves performance, boot time, and configures for portable use
+- **Secure**: Updates, disables telemetry, and configures firewall
+- **Harden**: SSH and firewall hardening
+- **Encrypt**: DNS traffic encryption for IPv4 and IPv6
+- **Disable Online Accounts**: Disables GNOME Online Accounts and related integration
+- **Install**: Define a custom list of programs to be installed
+- **Automate**: Set `auto=true` in `config.txt` for unattended, fully automatic runs
 
 ## Safety & UX
 
@@ -39,8 +41,8 @@ All of these are optional, you can pick what you want to do:
 
 ## Configuration: `config.txt`
 
-Options for automated runs are controlled by a simple `config.txt` file.<br>
-The lists for programs to be removed or installed are editable in the `debloat-mint.sh` script itself.
+Options for automated runs can be controlled from a `config.txt` file.<br>
+The lists for programs to be removed or installed are editable within the `debloat-mint.sh` script itself.
 
 Example:
 ```ini
@@ -73,11 +75,6 @@ options/services_to_disable=bluetooth,cups
 - **First time?** Run with defaults and review each prompt.
 - **Automate everything:** Set `auto=true` for hands-off setup (great for VM or repeatable builds).
 - **SSH Hardening:** Double-confirmation prevents accidental lockout. Read the prompts carefully!
-
-## Requirements
-- Linux Mint or Ubuntu installed
-- Root privileges
-- `zenity`, `timeshift`, `ufw` (script will check and warn if missing, they are pre-installed on Mint and Ubuntu)
 
 ## Credits
 This is a hard fork of [aaron-dev-git/Linux-Mint-Debloater](https://github.com/aaron-dev-git/Linux-Mint-Debloater).
