@@ -1,9 +1,9 @@
 #!/bin/bash
-# Version: 1.0.2
+# Version: 1.0.3
 
 for dep in zenity timeshift ufw; do
     if ! command -v "$dep" >/dev/null 2>&1; then
-        echo -e "\033[1;31m[ERROR]\033[0m Required dependency '$dep' not installed. Please install, then re-run this script."
+        echo -e "\033[1;31m[ERROR]\033[0m Required Dependency '$dep' Not Installed - Please Install, Then Re-Run This Script"
         exit 1
     fi
 done
@@ -28,17 +28,17 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $msg" | tee -a debloat.log
 }
 
-info()    { echo -e "${CYAN}[i] $1${RESET}"; log "INFO: $1"; }
-success() { echo -e "${GREEN}[+] $1${RESET}"; log "SUCCESS: $1"; }
-warn()    { echo -e "${YELLOW}[~] $1${RESET}"; log "WARN: $1"; }
-error()   { echo -e "${RED}[-] $1${RESET}"; log "ERROR: $1"; }
+info()    { echo -e "${CYAN}[i] $1${RESET}"; }
+success() { echo -e "${GREEN}[+] $1${RESET}"; }
+warn()    { echo -e "${YELLOW}[~] $1${RESET}"; }
+error()   { echo -e "${RED}[-] $1${RESET}"; }
 
 LOCAL_VERSION=$(get_version "$LOCAL_SCRIPT")
 REMOTE_VERSION=$(curl -fsSL "$REPO_URL" | grep '^# Version:' | head -n1 | awk '{print $3}')
 
-if [ -n "$REMOTE_VERSION" ] && [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
-    log "Update available: $LOCAL_VERSION -> $REMOTE_VERSION"
-    zenity --question --title="Update Available" --text="A new version ($REMOTE_VERSION) is available.\nUpdate now?" --no-wrap
+if [ -n "$REMOTE_VERSION" ] && [ "$(printf '%s\n' "$LOCAL_VERSION" "$REMOTE_VERSION" | sort -V | head -n1)" != "$REMOTE_VERSION" ]; then
+    log "Update To $REMOTE_VERSION Available (You Have $LOCAL_VERSION)"
+    zenity --question --title="Update Available" --text="A New Version ($REMOTE_VERSION) Is Available.\nUpdate Now?" --no-wrap
     if [ $? -eq 0 ]; then
         TMP_UPDATE="/tmp/debloat-mint.sh.update.$$"
         if curl -fsSL "$REPO_URL" -o "$TMP_UPDATE"; then
@@ -47,25 +47,25 @@ if [ -n "$REMOTE_VERSION" ] && [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
                 cp "$LOCAL_SCRIPT" "$LOCAL_SCRIPT.bak"
                 mv "$TMP_UPDATE" "$LOCAL_SCRIPT"
                 chmod +x "$LOCAL_SCRIPT"
-                log "Script updated to version $REMOTE_VERSION. Please re-run."
-                zenity --info --title="Updated" --text="Script updated to $REMOTE_VERSION. Please re-run the script." --no-wrap
+                log "Script Updated To Version $REMOTE_VERSION. Please Re-Run"
+                zenity --info --title="Updated" --text="Script Updated To $REMOTE_VERSION. Please Re-Run The Script" --no-wrap
                 exit 0
             else
-                log "Update failed: Downloaded file is not a valid script."
-                zenity --error --title="Update Failed" --text="Downloaded file is not a valid script." --no-wrap
+                log "Update Failed: Downloaded File Is Not A Valid Script"
+                zenity --error --title="Update Failed" --text="Downloaded File Is Not A Valid Script" --no-wrap
                 rm -f "$TMP_UPDATE"
             fi
         else
-            log "Update failed: Could not download new version."
-            zenity --error --title="Update Failed" --text="Could not download new version." --no-wrap
+            log "Update Failed: Could Not Download New Version"
+            zenity --error --title="Update Failed" --text="Could Not Download New Version" --no-wrap
         fi
     else
-        log "User chose not to update."
+        log "User Chose Not To Update"
     fi
 fi
 
 if [ "$EUID" -ne 0 ]; then
-	error "Please Run As Root."
+	error "Please Run As Root"
   	return 1 2>/dev/null
 	exit 1
 fi
@@ -78,8 +78,8 @@ auto_mode=$(read_config "auto")
 disable_online_accounts=$(read_config "options/disable_online_accounts")
 
 if [ "$auto_mode" = "true" ]; then
-	success "Running In Auto Mode."
-	info "Using config.txt settings."
+	success "Running In Auto Mode"
+	info "Using Settings From config.txt"
 	echo
 	create_snapshot=$(read_config "options/create_snapshot")
 	debloat=$(read_config "options/debloat")
@@ -97,18 +97,70 @@ if [ "$auto_mode" = "true" ]; then
 	remove_duplicates_path=$(read_config "options/remove_duplicates_path")
     services_to_disable=$(read_config "options/services_to_disable")
 else
-	success "Running In Manual Mode."
-	warn "Change value of 'auto' to 'true' in config.txt to enable auto mode."
+	success "Running In Manual Mode"
+	info "Select Operations In The Dialog"
 	echo
-fi
 
-if ! [ "$auto_mode" = "true" ]; then
-    zenity --question --text="Create Snapshot?" --no-wrap
-    if [ $? = 0 ]; then
-        create_snapshot="true"
-    else
-        create_snapshot="false"
+    choices=$(zenity --list --checklist \
+        --title="Linux Mint Debloater v$LOCAL_VERSION" \
+        --text="Select which operations to perform:" \
+        --column="Run" --column="Operation" \
+        TRUE "Create Snapshot" \
+        TRUE "Debloat System" \
+        FALSE "Portable Use Optimization" \
+        FALSE "Disable Flatpak" \
+        TRUE "Optimize Boot Time" \
+        TRUE "Disable Online Accounts" \
+        TRUE "Disable Telemetry" \
+        TRUE "Configure Firewall" \
+        FALSE "Kernel-Level Network Hardening" \
+        FALSE "Harden SSH" \
+        TRUE "Encrypt DNS" \
+        TRUE "Update System" \
+        FALSE "Install Programs" \
+        FALSE "Clean PATH Duplicates" \
+        FALSE "Reboot" \
+        --separator="|" \
+        --height=500 --width=480)
+
+    if [ $? -ne 0 ]; then
+        warn "User Cancelled - Exiting..."
+        exit 0
     fi
+
+    # Init flags
+    create_snapshot="false"
+    debloat="false"
+    portable_use="false"
+    disable_flatpak="false"
+    optimize_boot="false"
+    disable_online_accounts="false"
+    disable_telemetry="false"
+    configure_firewall="false"
+    harden_net="false"
+    harden_ssh="false"
+    encrypt_dns="false"
+    update_system="false"
+    install_programs="false"
+    remove_duplicates_path="false"
+    reboot_system="false"
+
+    # Set flags based on user choices
+    [[ "$choices" == *"Create Snapshot"* ]]             && create_snapshot="true"
+    [[ "$choices" == *"Debloat System"* ]]              && debloat="true"
+    [[ "$choices" == *"Portable Use Optimization"* ]]   && portable_use="true"
+    [[ "$choices" == *"Disable Flatpak"* ]]             && disable_flatpak="true"
+    [[ "$choices" == *"Optimize Boot Time"* ]]          && optimize_boot="true"
+    [[ "$choices" == *"Disable Online Accounts"* ]]     && disable_online_accounts="true"
+    [[ "$choices" == *"Disable Telemetry"* ]]           && disable_telemetry="true"
+    [[ "$choices" == *"Configure Firewall"* ]]          && configure_firewall="true"
+    [[ "$choices" == *"Kernel Network Hardening"* ]]    && harden_net="true"
+    [[ "$choices" == *"Harden SSH"* ]]                  && harden_ssh="true"
+    [[ "$choices" == *"Encrypt DNS"* ]]                 && encrypt_dns="true"
+    [[ "$choices" == *"Update System"* ]]               && update_system="true"
+    [[ "$choices" == *"Install Programs"* ]]            && install_programs="true"
+    [[ "$choices" == *"Clean PATH Duplicates"* ]]       && remove_duplicates_path="true"
+    [[ "$choices" == *"Reboot"* ]]                      && reboot_system="true"
 fi
 
 if [ "$create_snapshot" = "true" ]; then
@@ -116,27 +168,18 @@ if [ "$create_snapshot" = "true" ]; then
 	timeshift --create --comments "LM Primer ::System Snapshot:: $timestamp" --tags D
 
 	if [ $? -eq 0 ]; then
-	  	success "Timeshift Snapshot Created Successfully."
+	  	success "Timeshift Snapshot Created Successfully"
 	else
-	  	error "Failed To Create Timeshift Snapshot."
+	  	error "Failed To Create Timeshift Snapshot"
 	  	return 1 2>/dev/null
 		exit 1
 	fi
 else
-	warn "Skipped Snapshot Creation."
-fi
-
-if ! [ "$auto_mode" = "true" ]; then
-    zenity --question --text="Debloat?" --no-wrap
-    if [ $? = 0 ]; then
-        debloat="true"
-    else
-        debloat="false"
-    fi
+	warn "Skipped Snapshot Creation"
 fi
 
 if [ "$debloat" = "true" ]; then
-    log "Starting debloat process."
+    log "Starting Debloat Process"
     # Purging these programs
     # Delete from the list below if program should stay
     programs=(
@@ -165,47 +208,38 @@ if [ "$debloat" = "true" ]; then
     )
 
     for program in "${programs[@]}"; do
-        log "Purging package: $program"
+        log "Purging Package: $program"
         sudo apt purge "$program" -y | tee -a debloat.log
         if [ $? -eq 0 ]; then
-            log "Purged $program successfully."
+            log "Successfully Purged $program"
         else
-            log "Failed to purge $program."
+            log "Failed To Purge $program"
         fi
     done
 
     # Check for orphaned packages
     orphans=$(apt autoremove --dry-run | grep '^  ' | awk '{print $1}')
     if [ -n "$orphans" ]; then
-        log "Orphaned packages found: $orphans"
-        zenity --question --title="Orphaned Packages" --text="Orphaned packages detected:\n$orphans\n\nRemove them now?" --no-wrap
+        log "Orphaned Packages Found: $orphans"
+        zenity --question --title="Orphaned Packages" --text="Orphaned Packages Detected:\n$orphans\n\nRemove Them Now?" --no-wrap
         if [ $? -eq 0 ]; then
-            log "Removing orphaned packages: $orphans"
+            log "Removing Orphaned Packages: $orphans"
             sudo apt autoremove -y | tee -a debloat.log
             sudo apt clean | tee -a debloat.log
-            success "Orphaned packages removed."
+            success "Orphaned Packages Removed"
         else
-            warn "User chose not to remove orphaned packages."
+            warn "User Chose Not To Remove Orphaned Packages"
         fi
     else
-        log "No orphaned packages found after debloat."
+        log "No Orphaned Packages Found After Debloat"
         sudo apt clean | tee -a debloat.log
     fi
-    success "System Debloated."
+    success "System Debloated Successfully"
 else
-    warn "Skipped System Debloat."
+    warn "Skipped System Debloat"
 fi
 
 # Portable Optimization
-if ! [ "$auto_mode" = "true" ]; then
-    zenity --question --text="Prime For Portable Use?" --no-wrap
-    if [ $? = 0 ]; then
-        portable_use="true"
-    else
-        portable_use="false"
-    fi
-fi
-
 if [ "$portable_use" = "true" ]; then
 	# TLP, Powertop, ThermalD
  	sudo apt update && sudo apt upgrade -y
@@ -218,7 +252,7 @@ if [ "$portable_use" = "true" ]; then
 	if [ "$(cat /sys/class/power_supply/AC/online)" = "0" ]; then
 	sudo powertop --auto-tune
 fi
-	# TLP Configuration
+	# TLP Configuration (Adapt to your needs)
 	sudo sed -i \
  	-e 's/#TLP_ENABLE=0/TLP_ENABLE=1/' \
 	-e 's/#TLP_DEFAULT_MODE=AC/TLP_DEFAULT_MODE=AC/' \
@@ -245,7 +279,7 @@ fi
 
 	BT_CONF_FILE="/etc/bluetooth/main.conf"
 	if [ ! -f "$BT_CONF_FILE" ]; then
-		error "Bluetooth Config Error: $BT_CONF_FILE Does Not Exist."
+		error "Bluetooth Config Error: $BT_CONF_FILE Does Not Exist"
 		return 1 2>/dev/null
 		exit 1
 	else
@@ -253,47 +287,29 @@ fi
 	fi
 
 	if grep -q "^AutoEnable=false" "$BT_CONF_FILE"; then
-    	success "Successfully Updated $BT_CONF_FILE. AutoEnable Is Now Set To <False>."
+    	success "Successfully Updated $BT_CONF_FILE - AutoEnable Is Now Turned Off"
 	else
-    	error "Updating $BT_CONF_FILE Failed. Check Manually."
+    	error "Updating $BT_CONF_FILE Failed - Check Manually"
 	fi
 
 	sudo apt install -y preload
 	sudo systemctl enable preload && sudo systemctl start preload
 	sudo apt autoremove -y && sudo apt clean
-	success "Successfully Optimized For Portability."
+	success "Successfully Optimized For Portability"
 else
-	warn "Skipped Optimization For Portability."
+	warn "Skipped Optimization For Portability"
 fi
 
 # Disable Flatpak
-if ! [ "$auto_mode" = "true" ]; then
-    zenity --question --text="Disable Flatpak?" --no-wrap
-    if [ $? = 0 ]; then
-        disable_flatpak="true"
-    else
-        disable_flatpak="false"
-    fi
-fi
-
 if [ "$disable_flatpak" = "true" ]; then
 	sudo apt purge flatpak
 	sudo apt-mark hold flatpak
- 	success "Disabled Flatpak."
+ 	success "Disabled Flatpak"
 else
-	warn "Skipped Disabling Flatpak."
+	warn "Skipped Disabling Flatpak"
 fi
 
 # Boot Optimization
-if ! [ "$auto_mode" = "true" ]; then
-    zenity --question --text="Optimize Boot Time?" --no-wrap
-    if [ $? = 0 ]; then
-        optimize_boot="true"
-    else
-        optimize_boot="false"
-    fi
-fi
-
 if [ "$optimize_boot" = "true" ]; then
 	# Decrease GRUB timeout
 	sudo sed -i 's/GRUB_TIMEOUT=10/GRUB_TIMEOUT=1/' /etc/default/grub
@@ -308,23 +324,14 @@ if [ "$optimize_boot" = "true" ]; then
 	sudo sed -i 's/#DefaultTimeoutStartSec=90s/DefaultTimeoutStartSec=40s/' /etc/systemd/system.conf
 	sudo sed -i 's/#DefaultTimeoutStopSec=90s/DefaultTimeoutStopSec=40s/' /etc/systemd/system.conf
 	sudo systemctl daemon-reload
- 	success "Boot Optimization Successful."
+ 	success "Boot Optimization Successful"
 else
-	warn "Skipped Boot Optimization."
+	warn "Skipped Boot Optimization"
 fi
 
 # Disable Online Accounts Integration
-if ! [ "$auto_mode" = "true" ]; then
-    zenity --question --text="Disable Online Accounts Integration?" --no-wrap
-    if [ $? = 0 ]; then
-        disable_online_accounts="true"
-    else
-        disable_online_accounts="false"
-    fi
-fi
-
 if [ "$disable_online_accounts" = "true" ]; then
-    info "Disabling GNOME Online Accounts and related integration..."
+    info "Disabling GNOME Online Accounts And Related Integration"
     # Remove gnome-online-accounts and related packages
     sudo apt purge -y gnome-online-accounts gnome-control-center-data
     # Remove autostart entry if present
@@ -334,21 +341,12 @@ if [ "$disable_online_accounts" = "true" ]; then
     fi
     # Kill any running goa-daemon
     pkill -f goa-daemon
-    success "Online Accounts integration disabled."
+    success "Online Accounts Integration Disabled"
 else
-    warn "Skipped disabling Online Accounts integration."
+    warn "Skipped Disabling Online Accounts Integration"
 fi
 
 # Disable Reporting and Telemetry
-if ! [ "$auto_mode" = "true" ]; then
-    zenity --question --text="Disable Reporting and Telemetry?" --no-wrap
-    if [ $? = 0 ]; then
-        disable_telemetry="true"
-    else
-        disable_telemetry="false"
-    fi
-fi
-
 if [ "$disable_telemetry" = "true" ]; then
 	firefox_config=$(find "/home/${SUDO_USER:-$USER}/.mozilla/firefox/" -name "*.default-release" -exec echo {}/prefs.js \;)
     	if [ -f "$firefox_config" ]; then
@@ -363,7 +361,7 @@ if [ "$disable_telemetry" = "true" ]; then
 			echo 'user_pref("browser.newtabpage.activity-stream.feeds.telemetry", false);' >> "$firefox_config"
         	echo 'user_pref("extensions.htmlaboutaddons.recommendations.enabled", false);' >> "$firefox_config"
     	else
-        	warn "Firefox: Configuration file not found. Not installed or not used."
+        	warn "Firefox: Configuration File Not Found - Not Installed Or Not Used"
     	fi
 
     	thunderbird_config=$(find "/home/${SUDO_USER:-$USER}/.thunderbird/" -name "*.default-esr" -exec echo {}/prefs.js \;)
@@ -373,7 +371,7 @@ if [ "$disable_telemetry" = "true" ]; then
         	echo 'user_pref("mail.shell.checkDefaultClient", false);' >> "$thunderbird_config"
         	echo 'user_pref("mailnews.start_page.enabled", false);' >> "$thunderbird_config"
     	else
-        	warn "Thunderbird: Configuration file not found. Not installed or not used."
+        	warn "Thunderbird: Configuration File Not Found - Not Installed Or Not Used"
     	fi
 
 	chromium_config=$(find "/home/${SUDO_USER:-$USER}/.config/chromium/" -name "Default/Preferences")
@@ -381,30 +379,21 @@ if [ "$disable_telemetry" = "true" ]; then
 		sed -i 's/"metrics": {/"metrics": {"enabled": false,/' "$chromium_config"
 		sed -i 's/"reporting": {/"reporting": {"enabled": false,/' "$chromium_config"
 	else
-		warn "Chromium: Configuration file not found. Not installed or not used."
+		warn "Chromium: Configuration File Not Found - Not Installed Or Not Used"
 	fi
 
 	gsettings set org.gnome.desktop.privacy send-software-usage-stats false
 	gsettings set org.gnome.desktop.privacy report-technical-problems false
     gsettings set org.cinnamon.desktop.privacy remember-recent-files false
 else
-	warn "Skipped Reporting and Telemetry."
+	warn "Skipped Reporting And Telemetry"
 fi
 
 # Configure Firewall
-if ! [ "$auto_mode" = "true" ]; then
-    zenity --question --text="Configure and Enable Firewall?" --no-wrap
-    if [ $? = 0 ]; then
-        configure_firewall="true"
-    else
-        configure_firewall="false"
-    fi
-fi
-
 if [ "$configure_firewall" = "true" ]; then
 	if ! command -v ufw &> /dev/null; then
         sudo apt install -y ufw || {
-            error "Failed to install ufw."
+            error "Failed To Install UFW"
             return 1 2>/dev/null
             exit 1
         }
@@ -426,23 +415,14 @@ if [ "$configure_firewall" = "true" ]; then
 
     sudo ufw --force enable
     sudo ufw status verbose
-    success "Firewall configured and enabled successfully."
+    success "Firewall Configured And Enabled Successfully"
 else
-    warn "Skipped firewall configuration."
+    warn "Skipped Firewall Configuration"
 fi
 
 # Kernel-level Anti-Spoofing
 # Prevents IP address spoofing attacks, adds kernel-level network hardening measures.
 # Does not replace a properly setup firewall.
-if ! [ "$auto_mode" = "true" ]; then
-    zenity --question --text="Enable Kernel-level Network Hardening?" --no-wrap
-    if [ $? = 0 ]; then
-        harden_net="true"
-    else
-        harden_net="false"
-    fi
-fi
-
 if [ "$harden_net" = "true" ]; then
     # sudo rm -f /etc/sysctl.d/99-antispoof.conf
     cat <<EOF | sudo tee /etc/sysctl.d/99-network-hardening.conf > /dev/null
@@ -473,16 +453,16 @@ fs.suid_dumpable=0
 EOF
 
     sudo sysctl --system
-    success "Kernel-level network hardening enabled."
+    success "Kernel-Level Network Hardening Enabled"
 else
-    warn "Skipped kernel-level network hardening."
+    warn "Skipped Kernel-Level Network Hardening"
 fi
 
 # Harden SSH
 if [ "$harden_ssh" = "true" ]; then
-    zenity --question --text="Are you sure? This will change your SSH configuration and port." --no-wrap
+    zenity --question --text="Are You Sure? This Will Change Your SSH Configuration And Port." --no-wrap
     if [ $? != 0 ]; then
-        warn "SSH hardening cancelled by user."
+        warn "SSH Hardening Cancelled By User"
         harden_ssh="false"
     fi
 fi
@@ -508,7 +488,7 @@ EOF
     if ls ~/.ssh/*.pub >/dev/null 2>&1; then
         echo "PasswordAuthentication no" | sudo tee -a /etc/ssh/sshd_config.d/99-endpoint-hardening.conf > /dev/null
     else
-        warn "SSH keys not detected. Leaving password auth enabled."
+        warn "SSH Keys Not Detected - Leaving Password Auth Enabled"
     fi
 
     if command -v ufw &> /dev/null; then
@@ -519,45 +499,27 @@ EOF
 
     sudo sshd -t
     if [ $? -ne 0 ]; then
-        warn "New SSH config invalid. Rolling back."
+        warn "New SSH Config Invalid - Rolling Back..."
         sudo cp "$BACKUP" "$SSHD_CONFIG"
         sudo rm -f /etc/ssh/sshd_config.d/99-endpoint-hardening.conf
         sudo systemctl restart sshd
-        warn "SSH restored to previous working state."
+        warn "SSH Config Restored"
     else
         sudo systemctl restart sshd
-        success "SSH configuration hardened. Port: 2222"
+        success "SSH Configuration Hardened. Port: 2222"
     fi
 else
-    warn "Skipped SSH hardening."
+    warn "Skipped SSH Hardening"
 fi
 
-# Update System
-if ! [ "$auto_mode" = "true" ]; then
-    zenity --question --text="Update And Upgrade The System?" --no-wrap
-    if [ $? = 0 ]; then
-        update_system="true"
-    else
-        update_system="false"
-    fi
-fi
-
+# Update
 if [ "$update_system" = "true" ]; then
 	sudo apt update && sudo apt upgrade -y
 else
-	warn "Skipped Update."
+	warn "Skipped System Update"
 fi
 
 # Remove $PATH Duplicates
-if ! [ "$auto_mode" = "true" ]; then
-    zenity --question --text="Remove Duplicates from \$PATH?" --no-wrap
-    if [ $? = 0 ]; then
-        remove_duplicates_path="true"
-    else
-        remove_duplicates_path="false"
-    fi
-fi
-
 if [ "$remove_duplicates_path" = "true" ]; then
     OLD_IFS=$IFS
     IFS=:
@@ -573,9 +535,9 @@ if [ "$remove_duplicates_path" = "true" ]; then
     IFS=$OLD_IFS
     export PATH=$NEWPATH
     unset EXISTS
-    success "Removed duplicate entries from \$PATH."
+    success "Removed Duplicate Entries From \$PATH"
 else
-    warn "Skipped removing duplicates from \$PATH."
+    warn "Skipped Removing Duplicates From \$PATH"
 fi
 
 # Disable Selected Services
@@ -588,24 +550,15 @@ if [ "$auto_mode" = "true" ]; then
                 sudo systemctl disable "$svc_trimmed"
                 success "Disabled $svc_trimmed.service"
             else
-                warn "Service $svc_trimmed.service not found."
+                warn "Service $svc_trimmed.service Not Found"
             fi
         done
     else
-        warn "No services listed to disable in config."
+        warn "No Services To Disable"
     fi
 fi
 
 # Encrypt DNS Traffic
-if ! [ "$auto_mode" = "true" ]; then
-    zenity --question --text="Encrypt DNS Traffic?" --no-wrap
-    if [ $? = 0 ]; then
-        encrypt_dns="true"
-    else
-        encrypt_dns="false"
-    fi
-fi
-
 if [ "$encrypt_dns" = "true" ]; then
     # If using UFW, add rules for dnscrypt-proxy
     if command -v ufw &> /dev/null; then
@@ -625,13 +578,13 @@ if [ "$encrypt_dns" = "true" ]; then
     # Check status of systemd-resolved
     systemd_status=$(systemctl is-active systemd-resolved)
     if ! [ "$systemd_status" == "active" ]; then
-        echo "Error: systemd-resolved is not running."
+        error "systemd-resolved Is Not Running"
         exit 1
     fi
-    echo "DNS over TLS has been successfully configured with Cloudflare's DNS!"
-    echo "You can verify your DNS provider by visiting https://ipleak.net/."
+    success "Successfully Configured DNS-Over-TLS"
+    info "Verify Your DNS Provider By Visiting https://ipleak.net/"
 
-    ## TO UNDO THIS:
+    ## UNCOMMENT TO UNDO THIS:
     # Reversing the UFW rules for dnscrypt-proxy
     #if command -v ufw &> /dev/null; then
     #    sudo ufw delete allow in on lo to 127.0.0.1 port 53 proto udp
@@ -656,26 +609,17 @@ if [ "$encrypt_dns" = "true" ]; then
     #sudo systemctl disable systemd-resolved
     #systemd_status=$(systemctl is-active systemd-resolved)
     #if [ "$systemd_status" == "inactive" ]; then
-    #    echo "systemd-resolved has been successfully stopped."
+    #    info "systemd-resolved has been successfully stopped"
     #else
-    #    echo "Error: systemd-resolved is still running."
+    #    error "systemd-resolved is still running"
     #    exit 1
     #fi
-    #echo "DNS over TLS has been successfully reverted. DNS queries are no longer encrypted."
+    #success "DNS over TLS has been successfully reverted - DNS queries are no longer encrypted"
 else
-    warn "Skipped DNS encryption."
+    warn "Skipped DNS Encryption"
 fi
 
 # Install Programs
-if ! [ "$auto_mode" = "true" ]; then
-    zenity --question --text="Install Programs From List?" --no-wrap
-    if [ $? = 0 ]; then
-        install_programs="true"
-    else
-        install_programs="false"
-    fi
-fi
-
 if [ "$install_programs" = "true" ]; then
 	# Just some examples, modify to your needs
 	# Using somewhat cumbersome "apt install -y", but this allows for other custom install commands
@@ -702,27 +646,19 @@ if [ "$install_programs" = "true" ]; then
 	for tool in "${!tools[@]}"; do
 		echo "Installing $tool..."
 		if eval ${tools[$tool]}; then
-			success "Installed $tool."
+			success "Installed $tool"
 			echo
 		else
-			error "Failed Installing $tool."
+			error "Failed Installing $tool"
 			echo
 		fi
 	done
 else
-	warn "Skipped Program Installations."
+	warn "Skipped Program Installations"
 fi
 
 # Reboot
-if ! [ "$auto_mode" = "true" ]; then
-    zenity --question --text="Reboot Now?" --no-wrap
-    if [ $? = 0 ]; then
-        reboot_system="true"
-    else
-        reboot_system="false"
-    fi
-fi
-
 if [ "$reboot_system" = "true" ]; then
+    info "Rebooting..."
 	reboot
 fi
