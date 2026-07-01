@@ -8,7 +8,6 @@ for dep in zenity timeshift ufw; do
     fi
 done
 
-# Color codes
 RED="\033[1;31m"
 GREEN="\033[1;32m"
 YELLOW="\033[1;33m"
@@ -17,7 +16,6 @@ CYAN="\033[1;36m"
 RESET="\033[0m"
 
 REPO_URL="https://raw.githubusercontent.com/MK2112/linux-mint-debloater/refs/heads/main/debloat.sh"
-LOCAL_SCRIPT="$0"
 
 get_version() {
     grep '^# Version:' "$1" | head -n1 | awk '{print $3}'
@@ -33,7 +31,7 @@ success() { echo -e "${GREEN}[+] $1${RESET}"; }
 warn()    { echo -e "${YELLOW}[~] $1${RESET}"; }
 error()   { echo -e "${RED}[-] $1${RESET}"; }
 
-LOCAL_VERSION=$(get_version "$LOCAL_SCRIPT")
+LOCAL_VERSION=$(get_version "$0")
 REMOTE_VERSION=$(curl -fsSL "$REPO_URL" | grep '^# Version:' | head -n1 | awk '{print $3}')
 
 if [ -n "$REMOTE_VERSION" ] && [ "$(printf '%s\n' "$LOCAL_VERSION" "$REMOTE_VERSION" | sort -V | head -n1)" != "$REMOTE_VERSION" ]; then
@@ -44,9 +42,9 @@ if [ -n "$REMOTE_VERSION" ] && [ "$(printf '%s\n' "$LOCAL_VERSION" "$REMOTE_VERS
         if curl -fsSL "$REPO_URL" -o "$TMP_UPDATE"; then
             # Check for update validity
             if grep -q '^#!/bin/bash' "$TMP_UPDATE"; then
-                cp "$LOCAL_SCRIPT" "$LOCAL_SCRIPT.bak"
-                mv "$TMP_UPDATE" "$LOCAL_SCRIPT"
-                chmod +x "$LOCAL_SCRIPT"
+                cp "$0" "$0.bak"
+                mv "$TMP_UPDATE" "$0"
+                sudo chmod +x "$0"
                 log "Script Updated To Version $REMOTE_VERSION. Please Re-Run"
                 zenity --info --title="Updated" --text="Script Updated To $REMOTE_VERSION. Please Re-Run The Script" --no-wrap
                 exit 0
@@ -89,13 +87,13 @@ if [ "$auto_mode" = "true" ]; then
 	disable_telemetry=$(read_config "options/disable_telemetry")
 	configure_firewall=$(read_config "options/configure_firewall")
 	harden_net=$(read_config "options/harden_net")
-    harden_ssh=$(read_config "options/harden_ssh")
- 	encrypt_dns=$(read_config "options/encrypt_dns")
+	harden_ssh=$(read_config "options/harden_ssh")
+	encrypt_dns=$(read_config "options/encrypt_dns")
 	update_system=$(read_config "options/update_system")
 	install_programs=$(read_config "options/install_programs")
 	reboot_system=$(read_config "options/reboot_system")
 	remove_duplicates_path=$(read_config "options/remove_duplicates_path")
-    services_to_disable=$(read_config "options/services_to_disable")
+	services_to_disable=$(read_config "options/services_to_disable")
 else
 	success "Running In Manual Mode"
 	info "Select Operations In The Dialog"
@@ -103,7 +101,7 @@ else
 
     choices=$(zenity --list --checklist \
         --title="Linux Mint Debloater v$LOCAL_VERSION" \
-        --text="Select which operations to perform:" \
+        --text="Select Which Operations To Perform:" \
         --column="Run" --column="Operation" \
         TRUE "Create Snapshot" \
         TRUE "Debloat System" \
@@ -128,7 +126,6 @@ else
         exit 0
     fi
 
-    # Init flags
     create_snapshot="false"
     debloat="false"
     portable_use="false"
@@ -145,7 +142,6 @@ else
     remove_duplicates_path="false"
     reboot_system="false"
 
-    # Set flags based on user choices
     [[ "$choices" == *"Create Snapshot"* ]]             && create_snapshot="true"
     [[ "$choices" == *"Debloat System"* ]]              && debloat="true"
     [[ "$choices" == *"Portable Use Optimization"* ]]   && portable_use="true"
@@ -183,28 +179,28 @@ if [ "$debloat" = "true" ]; then
     # Purging these programs
     # Delete from the list below if program should stay
     programs=(
-        mintwelcome            # Welcome screen
-        redshift               # Screen Color adjustment tool for eye strain reduction
-        libreoffice-core       # Core components of LibreOffice
-        libreoffice-common     # Common files for LibreOffice
-        transmission-gtk       # BitTorrent client
-        hexchat                # Internet Relay Chat client
-        baobab                 # Disk usage analyzer
-        seahorse               # GNOME frontend for GnuPG
-        thunderbird            # Email and news client
-        rhythmbox              # Music player
-        pix                    # Image viewer and browser
-        simple-scan            # Scanning utility
-        drawing                # Drawing application
-        gnote                  # Note-taking application
-        xreader                # Document viewer
-        onboard                # On-screen keyboard
-        celluloid              # Video player
-        gnome-calendar         # Calendar application
-        gnome-contacts         # Contacts manager
-        gnome-logs             # Log viewer for the systemd
-        gnome-power-manager    # GNOME desktop Power management tool
-        warpinator             # Tool for local network file sharing
+        mintwelcome          # Welcome screen
+        redshift             # Screen Color adjustment tool for eye strain reduction
+        libreoffice-core     # Core components of LibreOffice
+        libreoffice-common   # Common files for LibreOffice
+        transmission-gtk     # BitTorrent client
+        hexchat              # Internet Relay Chat client
+        baobab               # Disk usage analyzer
+        seahorse             # GNOME frontend for GnuPG
+        thunderbird          # Email and news client
+        rhythmbox            # Music player
+        pix                  # Image viewer and browser
+        simple-scan          # Scanning utility
+        drawing              # Drawing application
+        gnote                # Note-taking application
+        xreader              # Document viewer
+        onboard              # On-screen keyboard
+        celluloid            # Video player
+        gnome-calendar       # Calendar application
+        gnome-contacts       # Contacts manager
+        gnome-logs           # Log viewer for the systemd
+        gnome-power-manager  # GNOME desktop Power management tool
+        warpinator           # Tool for local network file sharing
     )
 
     for program in "${programs[@]}"; do
