@@ -86,14 +86,14 @@ if [ "$auto_mode" = "true" ]; then
 	optimize_boot=$(read_config "options/optimize_boot")
 	disable_telemetry=$(read_config "options/disable_telemetry")
 	configure_firewall=$(read_config "options/configure_firewall")
-	harden_net=$(read_config "options/harden_net")
-	harden_ssh=$(read_config "options/harden_ssh")
+    harden_net=$(read_config "options/harden_net")
+    harden_ssh=$(read_config "options/harden_ssh")
 	encrypt_dns=$(read_config "options/encrypt_dns")
 	update_system=$(read_config "options/update_system")
 	install_programs=$(read_config "options/install_programs")
 	reboot_system=$(read_config "options/reboot_system")
 	remove_duplicates_path=$(read_config "options/remove_duplicates_path")
-	services_to_disable=$(read_config "options/services_to_disable")
+    services_to_disable=$(read_config "options/services_to_disable")
 else
 	success "Running In Manual Mode"
 	info "Select Operations In The Dialog"
@@ -142,21 +142,21 @@ else
     remove_duplicates_path="false"
     reboot_system="false"
 
-    [[ "$choices" == *"Create Snapshot"* ]]             && create_snapshot="true"
-    [[ "$choices" == *"Debloat System"* ]]              && debloat="true"
-    [[ "$choices" == *"Portable Use Optimization"* ]]   && portable_use="true"
-    [[ "$choices" == *"Disable Flatpak"* ]]             && disable_flatpak="true"
-    [[ "$choices" == *"Optimize Boot Time"* ]]          && optimize_boot="true"
-    [[ "$choices" == *"Disable Online Accounts"* ]]     && disable_online_accounts="true"
-    [[ "$choices" == *"Disable Telemetry"* ]]           && disable_telemetry="true"
-    [[ "$choices" == *"Configure Firewall"* ]]          && configure_firewall="true"
-    [[ "$choices" == *"Kernel Network Hardening"* ]]    && harden_net="true"
-    [[ "$choices" == *"Harden SSH"* ]]                  && harden_ssh="true"
-    [[ "$choices" == *"Encrypt DNS"* ]]                 && encrypt_dns="true"
-    [[ "$choices" == *"Update System"* ]]               && update_system="true"
-    [[ "$choices" == *"Install Programs"* ]]            && install_programs="true"
-    [[ "$choices" == *"Clean PATH Duplicates"* ]]       && remove_duplicates_path="true"
-    [[ "$choices" == *"Reboot"* ]]                      && reboot_system="true"
+    [[ "$choices" == *"Create Snapshot"* ]]           && create_snapshot="true"
+    [[ "$choices" == *"Debloat System"* ]]            && debloat="true"
+    [[ "$choices" == *"Portable Use Optimization"* ]] && portable_use="true"
+    [[ "$choices" == *"Disable Flatpak"* ]]           && disable_flatpak="true"
+    [[ "$choices" == *"Optimize Boot Time"* ]]        && optimize_boot="true"
+    [[ "$choices" == *"Disable Online Accounts"* ]]   && disable_online_accounts="true"
+    [[ "$choices" == *"Disable Telemetry"* ]]         && disable_telemetry="true"
+    [[ "$choices" == *"Configure Firewall"* ]]        && configure_firewall="true"
+    [[ "$choices" == *"Kernel Network Hardening"* ]]  && harden_net="true"
+    [[ "$choices" == *"Harden SSH"* ]]                && harden_ssh="true"
+    [[ "$choices" == *"Encrypt DNS"* ]]               && encrypt_dns="true"
+    [[ "$choices" == *"Update System"* ]]             && update_system="true"
+    [[ "$choices" == *"Install Programs"* ]]          && install_programs="true"
+    [[ "$choices" == *"Clean PATH Duplicates"* ]]     && remove_duplicates_path="true"
+    [[ "$choices" == *"Reboot"* ]]                    && reboot_system="true"
 fi
 
 if [ "$create_snapshot" = "true" ]; then
@@ -179,28 +179,28 @@ if [ "$debloat" = "true" ]; then
     # Purging these programs
     # Delete from the list below if program should stay
     programs=(
-        mintwelcome          # Welcome screen
-        redshift             # Screen Color adjustment tool for eye strain reduction
-        libreoffice-core     # Core components of LibreOffice
-        libreoffice-common   # Common files for LibreOffice
-        transmission-gtk     # BitTorrent client
-        hexchat              # Internet Relay Chat client
-        baobab               # Disk usage analyzer
-        seahorse             # GNOME frontend for GnuPG
-        thunderbird          # Email and news client
-        rhythmbox            # Music player
-        pix                  # Image viewer and browser
-        simple-scan          # Scanning utility
-        drawing              # Drawing application
-        gnote                # Note-taking application
-        xreader              # Document viewer
-        onboard              # On-screen keyboard
-        celluloid            # Video player
-        gnome-calendar       # Calendar application
-        gnome-contacts       # Contacts manager
-        gnome-logs           # Log viewer for the systemd
-        gnome-power-manager  # GNOME desktop Power management tool
-        warpinator           # Tool for local network file sharing
+        mintwelcome         # Welcome screen
+        redshift            # Screen Color adjustment tool for eye strain reduction
+        libreoffice-core    # Core components of LibreOffice
+        libreoffice-common  # Common files for LibreOffice
+        transmission-gtk    # BitTorrent client
+        hexchat             # Internet Relay Chat client
+        baobab              # Disk usage analyzer
+        seahorse            # GNOME frontend for GnuPG
+        thunderbird         # Email and news client
+        rhythmbox           # Music player
+        pix                 # Image viewer and browser
+        simple-scan         # Scanning utility
+        drawing             # Drawing application
+        gnote               # Note-taking application
+        xreader             # Document viewer
+        onboard             # On-screen keyboard
+        celluloid           # Video player
+        gnome-calendar      # Calendar application
+        gnome-contacts      # Contacts manager
+        gnome-logs          # Log viewer for the systemd
+        gnome-power-manager # GNOME desktop Power management tool
+        warpinator          # Tool for local network file sharing
     )
 
     for program in "${programs[@]}"; do
@@ -260,7 +260,7 @@ fi
 	-e 's/#CPU_MIN_PERF_ON_AC=0/CPU_MIN_PERF_ON_AC=0/' \
 	-e 's/#CPU_MAX_PERF_ON_AC=100/CPU_MAX_PERF_ON_AC=100/' \
 	-e 's/#CPU_MIN_PERF_ON_BAT=0/CPU_MIN_PERF_ON_BAT=0/' \
-	-e 's/#CPU_MAX_PERF_ON_BAT=30/CPU_MAX_PERF_ON_BAT=60/' \
+	-e 's/#CPU_MAX_PERF_ON_BAT=30/CPU_MAX_PERF_ON_BAT=75/' \
 	-e 's/#DISK_DEVICES="sda"/DISK_DEVICES="sda"/' \
 	-e 's/#DISK_APM_LEVEL_ON_AC="254 254"/DISK_APM_LEVEL_ON_AC="254 254"/' \
 	-e 's/#DISK_APM_LEVEL_ON_BAT="128 128"/DISK_APM_LEVEL_ON_BAT="128 128"/' \
