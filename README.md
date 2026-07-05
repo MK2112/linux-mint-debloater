@@ -11,7 +11,7 @@ cd linux-mint-debloater
 
 # Run
 chmod +x debloat.sh
-sudo ./debloat.sh
+./debloat.sh
 ```
 
 **Supported:**

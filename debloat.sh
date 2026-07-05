@@ -1,5 +1,5 @@
 #!/bin/bash
-# Version: 1.0.3
+# Version: 1.0.4
 
 for dep in zenity timeshift ufw; do
     if ! command -v "$dep" >/dev/null 2>&1; then
@@ -62,11 +62,7 @@ if [ -n "$REMOTE_VERSION" ] && [ "$(printf '%s\n' "$LOCAL_VERSION" "$REMOTE_VERS
     fi
 fi
 
-if [ "$EUID" -ne 0 ]; then
-	error "Please Run As Root"
-  	return 1 2>/dev/null
-	exit 1
-fi
+
 
 read_config() {
     grep "^$1=" config.txt | cut -d'=' -f2- | tr -d '\r' 2>/dev/null
@@ -161,7 +157,7 @@ fi
 
 if [ "$create_snapshot" = "true" ]; then
 	timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-	timeshift --create --comments "LM Primer ::System Snapshot:: $timestamp" --tags D
+	sudo timeshift --create --comments "LM Primer ::System Snapshot:: $timestamp" --tags D
 
 	if [ $? -eq 0 ]; then
 	  	success "Timeshift Snapshot Created Successfully"
@@ -214,7 +210,7 @@ if [ "$debloat" = "true" ]; then
     done
 
     # Check for orphaned packages
-    orphans=$(apt autoremove --dry-run | grep '^  ' | awk '{print $1}')
+	orphans=$(sudo apt autoremove --dry-run | grep '^  ' | awk '{print $1}')
     if [ -n "$orphans" ]; then
         log "Orphaned Packages Found: $orphans"
         zenity --question --title="Orphaned Packages" --text="Orphaned Packages Detected:\n$orphans\n\nRemove Them Now?" --no-wrap
@@ -279,7 +275,7 @@ fi
 		return 1 2>/dev/null
 		exit 1
 	else
-		sed -i 's/^AutoEnable=true/AutoEnable=false/' "$BT_CONF_FILE"
+		sudo sed -i 's/^AutoEnable=true/AutoEnable=false/' "$BT_CONF_FILE"
 	fi
 
 	if grep -q "^AutoEnable=false" "$BT_CONF_FILE"; then
@@ -641,7 +637,7 @@ if [ "$install_programs" = "true" ]; then
 
 	for tool in "${!tools[@]}"; do
 		echo "Installing $tool..."
-		if eval ${tools[$tool]}; then
+		if sudo ${tools[$tool]}; then
 			success "Installed $tool"
 			echo
 		else
@@ -656,5 +652,5 @@ fi
 # Reboot
 if [ "$reboot_system" = "true" ]; then
     info "Rebooting..."
-	reboot
+	sudo reboot
 fi
