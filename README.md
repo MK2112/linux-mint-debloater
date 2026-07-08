@@ -11,7 +11,7 @@ cd linux-mint-debloater
 
 # Run
 chmod +x debloat.sh
-./debloat.sh
+sudo ./debloat.sh
 ```
 
 **Supported:**
@@ -68,7 +68,7 @@ options/services_to_disable=bluetooth,cups
 ## How to Use
 
 1. **Edit `config.txt`** to select which actions to perform.
-2. **Run the script as root**: `sudo ./debloat.sh`
+2. **Run the script**: `sudo ./debloat.sh`
 3. **Follow the prompts** (unless in auto mode). Confirm or skip each action.
 
 ## Tips
