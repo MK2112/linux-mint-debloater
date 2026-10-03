@@ -5,11 +5,9 @@ Optimize your Linux Mint or Ubuntu.
 ```bash
 sudo apt install -y git
 
-# Clone
 git clone https://github.com/MK2112/linux-mint-debloater.git
 cd linux-mint-debloater
 
-# Run
 chmod +x debloat.sh
 ./debloat.sh
 ```
@@ -20,7 +18,7 @@ chmod +x debloat.sh
 
 ## Functionality
 
-You choose what should be done. Capabilities are:
+You choose what should be done.
 
 - **Back up** your system (Timeshift snapshot)
 - **Debloat:** Removes unwanted pre-installed software (customizable)
@@ -43,6 +41,9 @@ You choose what should be done. Capabilities are:
 
 Options for automated runs can be controlled from a `config.txt` file.<br>
 The lists for programs to be removed or installed are editable within the `debloat.sh` script itself.
+
+> [!WARNING]
+> Proceed with caution. This can cause issues. Do not run this blindly. Ensure you understand the configuration fully.
 
 Example:
 ```ini
